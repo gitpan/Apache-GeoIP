@@ -11,10 +11,17 @@ PerlModule Apache::Geo::IP
   PerlHandler My::name
 </Location>
 
-<Location /mirror>
+<Location /cpan>
   SetHandler perl-script
   PerlHandler My::mirror
   PerlSetVar GeoIPMirror "@ServerRoot@/conf/cpan_mirror.txt"
 </Location>
+
+<Location /apache>
+  SetHandler perl-script
+  PerlHandler My::mirror
+  PerlSetVar GeoIPMirror "@ServerRoot@/conf/apache_mirror.txt"
+</Location>
+
 
 

@@ -1,6 +1,7 @@
 package Apache::Geo::IP;
 
 use strict;
+use warnings;
 use Apache::RequestRec;                         # $r
 use Apache::Const -compile => qw(REMOTE_HOST);  # constants
 use Apache::RequestUtil ();                     # $r->dir_config
@@ -12,7 +13,7 @@ use Apache::GeoIP;
 
 @Apache::Geo::IP::ISA = qw(Apache::RequestRec);
 
-$VERSION = '1.21';
+$VERSION = '1.215';
 
 my $GEOIP_DBFILE;
 
@@ -42,16 +43,23 @@ sub init {
     die;
   }
 
-  my $flag = $r->dir_config->get('GeoIPFlag');
+  my $flag = $r->dir_config->get('GeoIPFlag') || '';
   if ($flag) {
     unless ($flag =~ /^(STANDARD|MEMORY_CACHE|CHECK_CACHE)$/i) {
       $r->log_error("GeoIP flag '$flag' not understood");
       die;
     }
-    $flag = 'GEOIP_' . uc($flag);
   }
-  else {
-    $flag = 'GEOIP_STANDARD';
+ FLAG: {
+    ($flag && $flag eq 'MEMORY_CACHE') && do {
+      $flag = GEOIP_MEMORY_CACHE;
+      last FLAG;
+    };
+    ($flag && $flag eq 'CHECK_CACHE') && do {
+      $flag = GEOIP_CHECK_CACHE;
+      last FLAG;
+    };
+    $flag = GEOIP_STANDARD;
   }
 
   unless ($gip = Apache::GeoIP->open($file, $flag)) {

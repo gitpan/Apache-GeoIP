@@ -1,6 +1,6 @@
 #XXXXXXX This is a prototype!!!  It will change in the future!!! XXXXX#
 name:         Apache-GeoIP
-version:      1.21
+version:      1.215
 version_from: Apache/GeoIP.pm
 installdirs:  site
 requires:

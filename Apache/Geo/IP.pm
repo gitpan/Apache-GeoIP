@@ -2,6 +2,7 @@ package Apache::Geo::IP;
 
 use Apache::GeoIP;
 use strict;
+use warnings;
 use Apache;
 use Apache::Constants qw(REMOTE_HOST);
 use vars qw($VERSION $gip);
@@ -10,7 +11,7 @@ my $GEOIP_DBFILE;
 
 @Apache::Geo::IP::ISA = qw(Apache);
 
-$VERSION = '1.21';
+$VERSION = '1.215';
 
 use constant GEOIP_STANDARD => 0;
 use constant GEOIP_MEMORY_CACHE => 1;
@@ -38,16 +39,24 @@ sub init {
     die;
   }
   
-  my $flag = $r->dir_config('GeoIPFlag');
+  my $flag = $r->dir_config('GeoIPFlag') || '';
   if ($flag) {
     unless ($flag =~ /^(STANDARD|MEMORY_CACHE|CHECK_CACHE)$/i) {
       $r->warn("GeoIP flag '$flag' not understood");
       die;
     }
-    $flag = 'GEOIP_' . uc($flag);
   }
-  else {
-    $flag = 'GEOIP_STANDARD';
+  $flag = uc($flag);
+ FLAG: {
+    ($flag && $flag eq 'MEMORY_CACHE') && do {
+      $flag = GEOIP_MEMORY_CACHE;
+      last FLAG;
+    };
+    ($flag && $flag eq 'CHECK_CACHE') && do {
+      $flag = GEOIP_CHECK_CACHE;
+      last FLAG;
+    };
+    $flag = GEOIP_STANDARD;
   }
 
   unless ($gip = Apache::GeoIP->open($file, $flag)) {

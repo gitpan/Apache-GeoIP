@@ -1,12 +1,13 @@
 package Apache::GeoIP;
 
 use strict;
+use warnings;
 use vars qw($VERSION);
 require DynaLoader;
 
 @Apache::GeoIP::ISA = qw(DynaLoader);
 
-$VERSION = '1.21';
+$VERSION = '1.215';
 
 __PACKAGE__->bootstrap($VERSION);
 

@@ -15,8 +15,8 @@ while (<DATA>) {
   chomp;
   my ($ipaddr, $exp_country) = split("\t");
  
- my $received = GET_BODY "/name?$ipaddr";
-my $expected = $exp_country;
+  my $received = GET_BODY "/name?$ipaddr";
+  my $expected = $exp_country;
   
 ok t_cmp(
         $expected,

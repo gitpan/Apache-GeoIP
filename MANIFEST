@@ -29,6 +29,7 @@ t/TEST.PL
 Apache/t/conf/extra.conf.in
 Apache2/Apache/t/conf/extra.conf.in
 t/conf/cpan_mirror.txt
+t/conf/apache_mirror.txt
 t/01basic.t
 t/ip.t
 t/name.t

@@ -1,11 +1,12 @@
 package Apache::Geo::Mirror;
 
 use strict;
-use vars qw($VERSION $gip %lat %lon $mirror $nearby_cache $default);
+use warnings;
+use vars qw($VERSION $GIP %lat %lon $MIRROR $NEARBY_CACHE $DEFAULT);
 
 use POSIX;
 
-$VERSION = '0.10';
+$VERSION = '0.40';
 
 use Apache::RequestRec;
 use APR::URI;
@@ -24,23 +25,31 @@ use constant GEOIP_STANDARD => 0;
 use constant GEOIP_MEMORY_CACHE => 1;
 use constant GEOIP_CHECK_CACHE => 2;
 
-while (<DATA>) {
-  my ($country, $lat, $lon) = split(':');
-
-  $lat{$country} = $lat;
-  $lon{$country} = $lon;
+unless (%lat and %lon) {
+  while (<DATA>) {
+    my ($country, $lat, $lon) = split(':');
+    
+    $lat{$country} = $lat;
+    $lon{$country} = $lon;
+  }
 }
 
 sub new {
   my ($class, $r) = @_;
- 
-  init($r) unless ($gip and $mirror);
-
-   return bless { r => $r }, $class;
+  
+  my $loc = $r->location;
+  init($r, $loc) unless (exists $GIP->{$loc} and exists $MIRROR->{$loc});
+  
+  return bless { r => $r,
+                 default => $DEFAULT->{$loc},
+                 mirror => $MIRROR->{$loc},
+                 gip => $GIP->{$loc},
+                 nearby_cache => $NEARBY_CACHE->{$loc}, 
+               }, $class;
 }
 
 sub init {
-  my $r = shift;
+  my ($r, $loc) = @_;
   my $file = $r->dir_config->get('GeoIPDBFile') || $GEOIP_DBFILE;
   if ($file)  {
     unless ( -e $file) {
@@ -52,71 +61,90 @@ sub init {
     $r->log_error("Must specify GeoIP database file");
     die;
   }
-
-  my $flag = $r->dir_config->get('GeoIPFlag');
-    if ($flag) {
-      unless ($flag =~ /^(STANDARD|MEMORY_CACHE|CHECK_CACHE)$/i) {
-        $r->log_error("GeoIP flag '$flag' not understood");
-	die;
-      }
-      $flag = 'GEOIP_' . uc($flag);
+  
+  my $flag = $r->dir_config->get('GeoIPFlag') || '';
+  if ($flag) {
+    unless ($flag =~ /^(STANDARD|MEMORY_CACHE|CHECK_CACHE)$/i) {
+      $r->log_error("GeoIP flag '$flag' not understood");
+      die;
     }
-  else {
-    $flag = 'GEOIP_STANDARD';
+  }
+ FLAG: {
+    ($flag && $flag eq 'MEMORY_CACHE') && do {
+      $flag = GEOIP_MEMORY_CACHE;
+      last FLAG;
+    };
+    ($flag && $flag eq 'CHECK_CACHE') && do {
+      $flag = GEOIP_CHECK_CACHE;
+      last FLAG;
+    };
+    $flag = GEOIP_STANDARD;
   }
   
-  unless ($gip = Apache::GeoIP->open($file, $flag)) {
+  unless ($GIP->{$loc} = Apache::GeoIP->open($file, $flag)) {
     $r->log_error("Couldn't make GeoIP object");
     die;
   }
   
   my $mirror_file = $r->dir_config->get('GeoIPMirror');
+  my $mirror_data;
   if ($mirror_file and -f $mirror_file) {
     open (MIRROR, $mirror_file) or die "Cannot open $mirror_file: $!";
     while(<MIRROR>) {
       my ($url, $country) = split(' ');
-      push @{$mirror->{$country}}, $url;
+      push @{$mirror_data->{$country}}, $url;
     }
     close MIRROR;
+    $MIRROR->{$loc} = $mirror_data;
   }
   else {
     $r->log_error("Please specify a mirror file");
     die;
   }
-  $default = $r->dir_config->get('GeoIPDefault') || 'us';
+  $NEARBY_CACHE->{$loc} = {};
+  $DEFAULT->{$loc} = $r->dir_config('GeoIPDefault') || 'us';
 }
 
 sub _random_mirror {
   my ($self, $country) = @_;
-
+  my $mirror = $self->{mirror};
+  
   my $num = scalar(@{$mirror->{$country}});
-
+  
   return unless $num;
-
+  
   return $mirror->{$country}->[int(rand()*$num)];
 }
 
 sub find_mirror_by_country {
   my ($self, $country) = @_;
-
+  my $default = $self->{default};
+  my $gip = $self->{gip};
+  my $mirror = $self->{mirror};
+  my $nearby_cache = $self->{default_cache};
+  
   unless ($country) {
     my $addr = shift || $self->connection->remote_ip;
     $country = lc($gip->_country_code_by_addr($addr)) || $default;
   }
-
+  
   if (exists $mirror->{$country}) {
     return $self->_random_mirror($country);
-  } elsif (exists $nearby_cache->{$country}) {
+  } 
+  elsif (exists $nearby_cache->{$country}) {
     return $self->_random_mirror($nearby_cache->{$country});
-  } else {
+  } 
+  else {
     my $new_country = $self->_find_nearby_country($country);
-    $nearby_cache->{$country} = $new_country;
+    $NEARBY_CACHE->{$country} = $new_country;
     return $self->_random_mirror($new_country);
   }
 }
 
 sub find_mirror_by_addr {
   my $self = shift;
+  my $default = $self->{default};
+  my $gip = $self->{gip};
   my $addr = shift || $self->connection->remote_ip;
   
   # default to $default if country not found
@@ -128,6 +156,8 @@ sub find_mirror_by_addr {
 sub find_mirror_by_name {
   my $self = shift;
   my $name = shift || $self->get_remote_host(Apache::REMOTE_HOST);
+  my $default = $self->{default};
+  my $gip = $self->{gip};
   
   # default to $default if country not found
   my $country = lc($gip->_country_code_by_name($name)) || $default;
@@ -137,11 +167,12 @@ sub find_mirror_by_name {
 
 sub _find_nearby_country {
   my ($self, $country) = @_;
-
+  my $mirror = $self->{mirror};
+  
   my @candidate_countries = keys %{$mirror};
   my $closest_country;
   my $closest_distance = 1_000_000_000;
-
+  
   for (@candidate_countries) {
     my $distance = $self->_calculate_distance($country, $_);
     if ($distance < $closest_distance) {
@@ -156,42 +187,43 @@ sub auto_redirect : method {
   my $class = shift;
   my $r = __PACKAGE__->new(shift);
   my $host =  $r->headers_in->get('X-Forwarded-For') || 
-     $r->connection->remote_ip;
+    $r->connection->remote_ip;
   $host =~ s!.*,\s*(.*)!$1! if ($host =~ /,/);
-  my $mirror = $r->find_mirror_by_addr($host);
+  my $chosen = $r->find_mirror_by_addr($host);
   my $uri = $r->parsed_uri();
-  my ($scheme, $name, $path) = $mirror =~ m!^(http|ftp)://([^/]+/)(.*)!;
+  my ($scheme, $name, $path) = $chosen =~ m!^(http|ftp)://([^/]+/)(.*)!;
   $uri->scheme($scheme);
   $uri->hostname($name);
   my $location = $r->location;
   (my $uri_path = $uri->path) =~ s!$location!!;
   $uri->path($path . $uri_path);
-  my $where = $uri->unparse;
-#  $r->log->warn("$where $scheme $host $path $mirror");
+  #    my $where = $uri->unparse;
+  #  $r->log->warn("$where $scheme $host $path $mirror");
   $r->headers_out->set(Location => $uri->unparse);
   return Apache::REDIRECT;
 }
-
+  
 sub _calculate_distance {
   my ($self, $country1, $country2) = @_;
-
+  
   my $lat_1 = $lat{$country1};
   my $lat_2 = $lat{$country2};
   my $lon_1 = $lon{$country1};
   my $lon_2 = $lon{$country2};
-
+  
   # Convert all the degrees to radians
   $lat_1 *= PI/180;
   $lon_1 *= PI/180;
   $lat_2 *= PI/180;
   $lon_2 *= PI/180;
-
+  
   # Find the deltas
   my $delta_lat = $lat_2 - $lat_1;
   my $delta_lon = $lon_2 - $lon_1;
-
+  
   # Find the Great Circle distance
-  my $temp = sin($delta_lat/2.0)**2 + cos($lat_1) * cos($lat_2) * sin($delta_lon/2.0)**2;
+  my $temp = sin($delta_lat/2.0)**2 + 
+    cos($lat_1) * cos($lat_2) * sin($delta_lon/2.0)**2;
   return atan2(sqrt($temp),sqrt(1-$temp));
 }
 

@@ -1,5 +1,13 @@
 Revision history for Perl extension Apache::Geo::IP.
 
+1.52 Mon Sep 13 16:36:00 2004
+  - in mp2 Apache::Geo::Mirror, fix bug when host mirror chosen
+    didn't have a path after the hostname
+  - in Mirror.pm, use the left-most ip address in the
+    X-Forwarded-For header for the host name, if defined,
+    rather than the right one, in cases more than one
+    is present. Also, ignore cases when 127.0.0.1 is used.
+
 1.51 Thu Sep 8 16:36:00 2004
   - fix bug in mp2 auto-redirect handler in Mirror.pm to
     remove the port number before redirecting

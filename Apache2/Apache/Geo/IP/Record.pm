@@ -2,10 +2,10 @@ package Apache::Geo::IP::Record;
 
 use Apache::GeoIP;
 use strict;
-use Apache::RequestRec;
-use Apache::RequestUtil;
-use APR::Table;
-use Apache::Log;
+use Apache::RequestRec ();
+use Apache::RequestUtil ();
+use APR::Table ();
+use Apache::Log ();
 use Apache::Connection ();
 use Apache::Module ();
 use Apache::Const -compile => qw(REMOTE_HOST REDIRECT);

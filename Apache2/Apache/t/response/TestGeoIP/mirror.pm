@@ -41,4 +41,13 @@ __DATA__
   PerlSetvar GeoIPMirror "@ServerRoot@/conf/apache_mirror.txt"
   PerlSetVar GeoIPDefault us
 </Location>
+
+PerlModule Apache::Geo::Mirror
+<Location /mirror>
+  SetHandler modperl
+  PerlResponseHandler Apache::Geo::Mirror->auto_redirect
+  PerlSetvar GeoIPMirror "@ServerRoot@/conf/auto_mirror.txt"
+  PerlSetVar GeoIPDefault jp
+</Location>
+
 </NoAutoConfig>

@@ -30,8 +30,10 @@ Apache2/Apache/t/response/TestGeoIP/basic.pm
 t/TEST.PL
 t/conf/cpan_mirror.txt
 t/conf/apache_mirror.txt
+t/conf/auto_mirror.txt
 t/geoip/ip.t
 t/geoip/name.t
 t/geoip/mirror.t
+t/geoip/auto_mirror.t
 
 META.yml                                Module meta-data (added by MakeMaker)

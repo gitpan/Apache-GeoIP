@@ -11,6 +11,8 @@ require 5.006001;
 use constant WIN32 => ($^O =~ /Win32/i);
 require Win32 if WIN32;
 
+my $min_at_version = 1.13;
+
 my (%config, $ans, $GEOIP_DBFILE, $GEOIP_DBCITYFILE, @src_files);
 my $db_file = 'GeoIP.dat';
 my $db_dir = WIN32 ? $ENV{ProgramFiles} . '/GeoIP' : '/usr/local/share/GeoIP';
@@ -101,10 +103,31 @@ for (@inc) {
     }
 }
 $config{DEFINE} .= ' -DHAVE_STDINT_H' if $have_stdint_h;
+
+my $prereq = {mod_perl => $mpv};
+eval {require Apache::Test;};
+if ($@) {
+    print <<'WARN';
+
+Apparently you are missing Apache::Test, which is needed
+to run the test suite. I can add this to the list of
+prerequisites, if you like.
+
+WARN
+
+    my $ans = prompt('Add Apache::Test to prerequisites?', 'yes');
+    if ($ans =~ /^y/i) {
+        $prereq->{'Apache::Test'} = $min_at_version;
+    }
+    else {
+        print "The test suite will be disabled\n";
+    }
+}
+
 my %opts = (
 	      NAME           => 'Apache::GeoIP',
 	      VERSION_FROM   => "$libdir/GeoIP.pm",
-              PREREQ_PM      => { mod_perl => $mpv },
+              PREREQ_PM      => $prereq,
 	      ($] >= 5.005 ?   
 	       (ABSTRACT_FROM => "$libdir/GeoIP.pm",
 		AUTHOR     => 'Randy Kobes <randy@theoryx5.uwinnipeg.ca>') 

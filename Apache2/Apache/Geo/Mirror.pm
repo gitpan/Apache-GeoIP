@@ -4,16 +4,16 @@ use strict;
 use warnings;
 use vars qw($VERSION $GIP %lat %lon $MIRROR $NEARBY_CACHE $DEFAULT $cfg);
 
-$VERSION = '1.51';
+$VERSION = '1.52';
 
 use Apache::RequestRec ();
-use APR::URI ();
 use Apache::Const -compile => qw(REMOTE_HOST REDIRECT);
 use Apache::RequestUtil ();
 use APR::Table ();
 use Apache::Log ();
 use Apache::Connection ();
-
+use Apache::URI ();
+use APR::URI ();
 use Apache::GeoIP;
 my $GEOIP_DBFILE;
 
@@ -186,12 +186,23 @@ sub _find_nearby_country {
 sub auto_redirect : method {
   my $class = shift;
   my $r = __PACKAGE__->new(shift);
+  my $ReIpNum = qr{([01]?\d\d?|2[0-4]\d|25[0-5])};
+  my $ReIpAddr = qr{^$ReIpNum\.$ReIpNum\.$ReIpNum\.$ReIpNum$};
   my $host =  $r->headers_in->get('X-Forwarded-For') || 
     $r->connection->remote_ip;
-  $host =~ s!.*,\s*(.*)!$1! if ($host =~ /,/);
+  if ($host =~ /,/) {
+      my @a = split /\s*,\s*/, $host;
+      for my $i (0 .. $#a) {
+          if ($a[$i] =~ /$ReIpAddr/ and $a[$i] ne '127.0.0.1') {
+              $host = $a[$i];
+              last;
+          }
+      }
+      $host = '127.0.0.1' if $host =~ /,/;
+  }
   my $chosen = $r->find_mirror_by_addr($host);
   my $uri = $r->parsed_uri();
-  my ($scheme, $name, $path) = $chosen =~ m!^(http|ftp)://([^/]+/)(.*)!;
+  my ($scheme, $name, $path) = $chosen =~ m!^(http|ftp)://([^/]+/?)(.*)!;
   $uri->scheme($scheme);
   $uri->hostname($name);
   my $location = $r->location;

@@ -4,7 +4,7 @@ use strict;
 use warnings;
 use vars qw($VERSION $GIP %lat %lon $MIRROR $NEARBY_CACHE $DEFAULT $cfg);
 
-$VERSION = '1.5';
+$VERSION = '1.51';
 
 use Apache::RequestRec ();
 use APR::URI ();
@@ -197,9 +197,10 @@ sub auto_redirect : method {
   my $location = $r->location;
   (my $uri_path = $uri->path) =~ s!$location!!;
   $uri->path($path . $uri_path);
-  #    my $where = $uri->unparse;
-  #  $r->log->warn("$where $scheme $host $path $mirror");
-  $r->headers_out->set(Location => $uri->unparse);
+  my $where = $uri->unparse;
+  $where =~ s!:\d+!!;
+  #  $r->log->warn("$where $host");
+  $r->headers_out->set(Location => $where);
   return Apache::REDIRECT;
 }
   

@@ -11,7 +11,7 @@ my $GEOIP_DBFILE;
 
 @Apache::Geo::IP::ISA = qw(Apache);
 
-$VERSION = '1.5';
+$VERSION = '1.51';
 
 use constant GEOIP_STANDARD => 0;
 use constant GEOIP_MEMORY_CACHE => 1;

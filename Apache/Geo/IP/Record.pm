@@ -9,10 +9,11 @@ my $GEOIP_DBCITYFILE;
 
 @Apache::Geo::IP::Record::ISA = qw(Apache);
 
-$VERSION = '1.21';
+$VERSION = '1.5';
 
-sub GEOIP_STANDARD(){0;}
-sub GEOIP_MEMORY_CACHE(){1;}
+use constant GEOIP_STANDARD => 0;
+use constant GEOIP_MEMORY_CACHE => 1;
+use constant GEOIP_CHECK_CACHE => 2;
 
 sub new {
   my ($class, $r) = @_;
@@ -38,15 +39,23 @@ sub init {
 
   my $flag = $r->dir_config('GeoIPFlag');
   if ($flag) {
-    unless ($flag =~ /^(STANDARD|MEMORY_CACHE)$/i) {
+    unless ($flag =~ /^(STANDARD|MEMORY_CACHE|CHECK_CACHE)$/i) {
       $r->warn("GeoIP flag '$flag' not understood");
       die;
     }
-    $flag = 'GEOIP_' . uc($flag);
   }
-  else {
-    $flag = 'GEOIP_STANDARD';
+ FLAG: {
+      ($flag && $flag eq 'MEMORY_CACHE') && do {
+          $flag = GEOIP_MEMORY_CACHE;
+          last FLAG;
+      };
+      ($flag && $flag eq 'CHECK_CACHE') && do {
+          $flag = GEOIP_CHECK_CACHE;
+          last FLAG;
+      };
+      $flag = GEOIP_STANDARD;
   }
+
   unless ($gir = Apache::GeoIP->open($file, $flag)) {
     $r->warn("Couldn't make GeoIP record object");
     die;
@@ -208,6 +217,9 @@ upon installing the module.
 
 This can be set to I<STANDARD>, or for faster performance
 but at a cost of using more memory, I<MEMORY_CACHE>.
+When using memory
+cache you can force a reload if the file is updated by 
+using I<CHECK_CACHE>.
 If not specified, I<STANDARD> is used.
 
 =back

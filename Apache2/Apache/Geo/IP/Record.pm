@@ -7,7 +7,9 @@ use Apache::RequestUtil;
 use APR::Table;
 use Apache::Log;
 use Apache::Connection ();
-use vars qw($VERSION $record $gir);
+use Apache::Module ();
+use Apache::Const -compile => qw(REMOTE_HOST REDIRECT);
+use vars qw($VERSION $record $gir $cfg);
 
 my $GEOIP_DBCITYFILE;
 
@@ -15,9 +17,9 @@ my $GEOIP_DBCITYFILE;
 
 $VERSION = '1.21';
 
-sub GEOIP_STANDARD(){0;}
-sub GEOIP_MEMORY_CACHE(){1;}
-sub GEOIP_CHECK_CACHE(){2;}
+use constant GEOIP_STANDARD => 0;
+use constant GEOIP_MEMORY_CACHE => 1;
+use constant GEOIP_CHECK_CACHE => 2;
 
 sub new {
   my ($class, $r) = @_;
@@ -32,7 +34,7 @@ sub init {
   my $file = $r->dir_config->get('GeoIPDBCityFile') || $GEOIP_DBCITYFILE;
   if ($file) {
     unless (-e $file) {
-      $r->log_error("Cannot find GeoIPCity database file '$file'");
+      $r->log->error("Cannot find GeoIPCity database file '$file'");
       die;
     }
   }
@@ -41,23 +43,31 @@ sub init {
     die;
   }
   
-  my $flag = $r->dir_config->get('GeoIPFlag');
+  my $flag = $r->dir_config->get('GeoIPFlag') || '';
   if ($flag) {
-    unless ($flag =~ /^(STANDARD|MEMORY_CACHE)$/i) {
-      $r->log_error("GeoIP flag '$flag' not understood");
-      die;
-    }
-    $flag = 'GEOIP_' . uc($flag);
+      unless ($flag =~ /^(STANDARD|MEMORY_CACHE|CHECK_CACHE)$/i) {
+          $r->log->error("GeoIP flag '$flag' not understood");
+          die;
+      }
   }
-  else {
-    $flag = 'GEOIP_STANDARD';
+ FLAG: {
+      ($flag && $flag eq 'MEMORY_CACHE') && do {
+          $flag = GEOIP_MEMORY_CACHE;
+          last FLAG;
+      };
+      ($flag && $flag eq 'CHECK_CACHE') && do {
+          $flag = GEOIP_CHECK_CACHE;
+          last FLAG;
+      };
+      $flag = GEOIP_STANDARD;
   }
+
   unless ($gir = Apache::GeoIP->open($file, $flag)) {
-    $r->log_error("Couldn't make GeoIP record object");
+    $r->log->error("Couldn't make GeoIP record object");
     die;
   }
   unless (make_record($r->connection->remote_ip)) {
-    $r->log_error("Couldn't make GeoIP record");
+    $r->log->error("Couldn't make GeoIP record");
     die;
   }
 }
@@ -214,6 +224,9 @@ upon installing the module.
 
 This can be set to I<STANDARD>, or for faster performance
 but at a cost of using more memory, I<MEMORY_CACHE>.
+When using memory
+cache you can force a reload if the file is updated by 
+using I<CHECK_CACHE>.
 If not specified, I<STANDARD> is used.
 
 =back

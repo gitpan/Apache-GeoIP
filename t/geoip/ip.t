@@ -13,14 +13,14 @@ t_debug("connecting to $hostport");
 
 while (<DATA>) {
   chomp;
-  my ($ipaddr, $exp_country) = split("\t");
+  my ($ipaddr, $exp_country) = split ' ', $_, 2;
  
- my $received = GET_BODY "/ip?$ipaddr";
+ my $received = GET_BODY "/TestGeoIP__ip?$ipaddr";
  my $expected = $exp_country;
   
 ok t_cmp(
-        $expected,
         $received,
+        $expected,
         "testing ip with $ipaddr",
         );
 

@@ -13,14 +13,14 @@ t_debug("connecting to $hostport");
 
 while (<DATA>) {
   chomp;
-  my ($ipaddr, $exp_country) = split("\t");
+  my ($ipaddr, $exp_country) = split ' ', $_, 2;
  
-  my $received = GET_BODY "/name?$ipaddr";
+  my $received = GET_BODY "/TestGeoIP__name?$ipaddr";
   my $expected = $exp_country;
   
 ok t_cmp(
-        $expected,
         $received,
+        $expected,
         "testing name with $ipaddr",
         );
 
@@ -38,7 +38,7 @@ __DATA__
 203.15.106.23	AU
 196.31.1.1	ZA
 yahoo.com	US
-www.bundesregierung.de	DE
+ftp.leo.org     DE
 www.thaigov.go.th	TH
 www.gov.ru	RU
 www.parliament.ge	GE

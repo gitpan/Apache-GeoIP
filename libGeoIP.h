@@ -1,5 +1,5 @@
 /* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 2; tab-width: 2 -*- */
-/* libGeoIP.h
+/* GeoIP.h
  *
  * Copyright (C) 2003 MaxMind LLC
  *
@@ -70,6 +70,7 @@ typedef enum {
 	GEOIP_REGION_EDITION_REV1 = 3,
 	GEOIP_PROXY_EDITION       = 8,
 	GEOIP_ASNUM_EDITION       = 9,
+	GEOIP_NETSPEED_EDITION   = 10,
 } GeoIPDBTypes;
 
 typedef enum {
@@ -77,6 +78,13 @@ typedef enum {
 	GEOIP_HTTP_X_FORWARDED_FOR_PROXY = 2,
 	GEOIP_HTTP_CLIENT_IP_PROXY = 3,
 } GeoIPProxyTypes;
+
+typedef enum {
+	GEOIP_UNKNOWN_SPEED = 0,
+	GEOIP_DIALUP_SPEED = 1,
+	GEOIP_CABLEDSL_SPEED = 2,
+	GEOIP_CORPORATE_SPEED = 3,
+} GeoIPNetspeedValues;
 
 extern char **GeoIPDBFileName;
 extern const char * GeoIPDBDescription[NUM_DB_TYPES];
@@ -91,7 +99,7 @@ extern const char GeoIP_country_code3[247][4];
 extern const char * GeoIP_country_name[247];
 extern const char GeoIP_country_continent[247][3];
 
-#ifdef WIN32
+#ifdef DLL
 #define GEOIP_API __declspec(dllexport)
 #else
 #define GEOIP_API
@@ -108,6 +116,8 @@ GEOIP_API const char *GeoIP_country_code3_by_addr (GeoIP* gi, const char *addr);
 GEOIP_API const char *GeoIP_country_code3_by_name (GeoIP* gi, const char *host);
 GEOIP_API const char *GeoIP_country_name_by_addr (GeoIP* gi, const char *addr);
 GEOIP_API const char *GeoIP_country_name_by_name (GeoIP* gi, const char *host);
+GEOIP_API const char *GeoIP_country_code_by_ipnum (GeoIP* gi, unsigned long ipnum);
+GEOIP_API unsigned long lookupaddress (const char *host);
 
 /* Deprecated - for backwards compatibility only */
 GEOIP_API int GeoIP_country_id_by_addr (GeoIP* gi, const char *addr);
@@ -118,6 +128,7 @@ GEOIP_API char *GeoIP_org_by_name (GeoIP* gi, const char *host);
 
 GEOIP_API int GeoIP_id_by_addr (GeoIP* gi, const char *addr);
 GEOIP_API int GeoIP_id_by_name (GeoIP* gi, const char *host);
+GEOIP_API int GeoIP_id_by_ipnum (GeoIP* gi, unsigned long ipnum);
 
 GEOIP_API GeoIPRegion * GeoIP_region_by_addr (GeoIP* gi, const char *addr);
 GEOIP_API GeoIPRegion * GeoIP_region_by_name (GeoIP* gi, const char *host);

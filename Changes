@@ -1,5 +1,11 @@
 Revision history for Perl extension Apache::Geo::IP.
 
+1.5 Wed Sep 08 22:13:00 2004
+  - upgrade to GeoIP-1.3.6
+  - get rid of warning in Mirror.pm when a country's
+    latitude and longitude aren't available
+  - simplify test suite
+
 1.4 Sun Dec 07 15:13:00 2003
 
   - for mp2, need Apache::Connection in Apache::Geo::IP

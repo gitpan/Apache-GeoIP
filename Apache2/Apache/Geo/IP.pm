@@ -2,19 +2,19 @@ package Apache::Geo::IP;
 
 use strict;
 use warnings;
-use Apache::RequestRec;                         # $r
+use Apache::RequestRec ();                         # $r
 use Apache::Const -compile => qw(REMOTE_HOST);  # constants
 use Apache::RequestUtil ();                     # $r->dir_config
-use APR::Table;                                 # dir_config->get
-use Apache::Log;                                # log_error
+use APR::Table ();                                 # dir_config->get
+use Apache::Log ();                                # log_error
 use Apache::Connection ();
-use vars qw($VERSION $gip);
+use vars qw($VERSION $gip $cfg);
 
 use Apache::GeoIP;
 
 @Apache::Geo::IP::ISA = qw(Apache::RequestRec);
 
-$VERSION = '1.4';
+$VERSION = '1.5';
 
 my $GEOIP_DBFILE;
 
@@ -24,7 +24,6 @@ use constant GEOIP_CHECK_CACHE => 2;
 
 sub new {
   my ($class, $r) = @_;
-
   init($r) unless $gip;
 
   return bless { r => $r}, $class;
@@ -35,19 +34,19 @@ sub init {
   my $file = $r->dir_config->get('GeoIPDBFile') || $GEOIP_DBFILE;
   if ($file) {
     unless ( -e $file) {
-      $r->log_error("Cannot find GeoIP database file '$file'");
+      $r->log->error("Cannot find GeoIP database file '$file'");
       die;
     }
   }
   else {
-    $r->log_error("Must specify GeoIP database file");
+    $r->log->error("Must specify GeoIP database file");
     die;
   }
 
   my $flag = $r->dir_config->get('GeoIPFlag') || '';
   if ($flag) {
     unless ($flag =~ /^(STANDARD|MEMORY_CACHE|CHECK_CACHE)$/i) {
-      $r->log_error("GeoIP flag '$flag' not understood");
+      $r->log->error("GeoIP flag '$flag' not understood");
       die;
     }
   }
@@ -64,7 +63,7 @@ sub init {
   }
 
   unless ($gip = Apache::GeoIP->open($file, $flag)) {
-    $r->log_error("Couldn't make GeoIP object");
+    $r->log->error("Couldn't make GeoIP object");
     die;
   }
 }
@@ -104,7 +103,6 @@ sub country_name_by_name {
   my $host = shift || $self->get_remote_host(Apache::REMOTE_HOST);
   return $gip->_country_name_by_name($host);
 }
-
 
 1;
 
@@ -251,10 +249,6 @@ If I<$ipname> is not given, the value obtained by
 C<$r-E<gt>get_remote_host(Apache::REMOTE_HOST)> is used.
 
 =back
-
-=head1 VERSION
-
-1.11
 
 =head1 SEE ALSO
 

@@ -74,8 +74,7 @@ sub place_db {
 my $objs = 'libGeoIP.o libGeoIPCity.o GeoIP.o';
 
 if (WIN32) {
-  $GEOIP_DBFILE = Win32::GetShortPathName($GEOIP_DBFILE)
-    if $GEOIP_DBFILE =~ / /;
+  $GEOIP_DBFILE = Win32::GetShortPathName($GEOIP_DBFILE);
 }
 
 my $to_edit = { 'Mirror.pm' => 
@@ -102,8 +101,7 @@ for (@inc) {
     }
 }
 $config{DEFINE} .= ' -DHAVE_STDINT_H' if $have_stdint_h;
-
-WriteMakefile(
+my %opts = (
 	      NAME           => 'Apache::GeoIP',
 	      VERSION_FROM   => "$libdir/GeoIP.pm",
               PREREQ_PM      => { mod_perl => $mpv },
@@ -118,7 +116,15 @@ WriteMakefile(
 				 COMPRESS => 'gzip -9f',
 				},
 	      %config,
-	     );
+           );
+
+if ($mpv < 1.99) {
+    WriteMakefile(%opts);
+}
+else {
+    require ModPerl::MM;
+    ModPerl::MM::WriteMakefile(%opts);
+}
 
 # use Apache::Test to test things, but if not available,
 # print out a message to that effect for 'make test'
@@ -126,6 +132,7 @@ WriteMakefile(
 sub MY::test {
   eval {require Apache::TestMM; import Apache::TestMM qw(test clean)};
   unless ($@) {
+    Apache::TestMM::filter_args();
     Apache::TestMM::generate_script('t/TEST');
     return Apache::TestMM->test;
   }

@@ -11,9 +11,10 @@ libGeoIP.h
 libGeoIPCity.c
 libGeoIPCity.h
 typemap
-Apache/t/My/ip.pm
-Apache/t/My/mirror.pm
-Apache/t/My/name.pm
+Apache/t/response/TestGeoIP/ip.pm
+Apache/t/response/TestGeoIP/mirror.pm
+Apache/t/response/TestGeoIP/name.pm
+Apache/t/response/TestGeoIP/basic.pm
 Apache/GeoIP.pm
 Apache/Geo/IP.pm
 Apache/Geo/Mirror.pm
@@ -22,17 +23,15 @@ Apache2/Apache/GeoIP.pm
 Apache2/Apache/Geo/IP.pm
 Apache2/Apache/Geo/Mirror.pm
 Apache2/Apache/Geo/IP/Record.pm
-Apache2/Apache/t/My/ip.pm
-Apache2/Apache/t/My/mirror.pm
-Apache2/Apache/t/My/name.pm
+Apache2/Apache/t/response/TestGeoIP/ip.pm
+Apache2/Apache/t/response/TestGeoIP/mirror.pm
+Apache2/Apache/t/response/TestGeoIP/name.pm
+Apache2/Apache/t/response/TestGeoIP/basic.pm
 t/TEST.PL
-Apache/t/conf/extra.conf.in
-Apache2/Apache/t/conf/extra.conf.in
 t/conf/cpan_mirror.txt
 t/conf/apache_mirror.txt
-t/basic.t
-t/ip.t
-t/name.t
-t/mirror.t
+t/geoip/ip.t
+t/geoip/name.t
+t/geoip/mirror.t
 
 META.yml                                Module meta-data (added by MakeMaker)

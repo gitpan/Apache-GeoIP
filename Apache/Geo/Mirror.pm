@@ -6,7 +6,7 @@ use vars qw($VERSION $GIP %lat %lon $MIRROR $NEARBY_CACHE $DEFAULT);
 use Apache::GeoIP;
 use POSIX;
 
-$VERSION = '0.40';
+$VERSION = '1.5';
 
 my $GEOIP_DBFILE;
 
@@ -168,6 +168,7 @@ sub _find_nearby_country {
   my $closest_distance = 1_000_000_000;
   
   for (@candidate_countries) {
+    next unless (defined $lat{$_} and defined $lon{$_});
     my $distance = $self->_calculate_distance($country, $_);
     if ($distance < $closest_distance) {
       $closest_country = $_;

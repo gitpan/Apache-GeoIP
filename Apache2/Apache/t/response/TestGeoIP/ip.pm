@@ -1,4 +1,4 @@
-package My::ip;
+package TestGeoIP::ip;
 use Apache::Geo::IP;
 use strict;
 use warnings FATAL => 'all';

@@ -1,4 +1,4 @@
-package My::mirror;
+package TestGeoIP::mirror;
 use Apache::Geo::Mirror;
 use strict;
 use warnings FATAL => 'all';
@@ -26,4 +26,19 @@ sub handler {
 }
 1;
 
-__END__
+__DATA__
+<NoAutoConfig>
+<Location /cpan>
+  SetHandler modperl
+  PerlResponseHandler TestGeoIP::mirror
+  PerlSetVar GeoIPMirror "@ServerRoot@/conf/cpan_mirror.txt"
+  PerlSetVar GeoIPFlag MEMORY_CACHE
+</Location>
+
+<Location /apache>
+  SetHandler modperl
+  PerlResponseHandler TestGeoIP::mirror
+  PerlSetvar GeoIPMirror "@ServerRoot@/conf/apache_mirror.txt"
+  PerlSetVar GeoIPDefault us
+</Location>
+</NoAutoConfig>

@@ -1,5 +1,5 @@
 /* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 2; tab-width: 2 -*- */
-/* libGeoIPCity.h
+/* GeoIPCity.h
  *
  * Copyright (C) 2003 MaxMind LLC  All rights reserved.
  *
@@ -21,7 +21,7 @@
 #ifndef GEOIPCITY_H
 #define GEOIPCITY_H
 
-#include "GeoIP.h"
+#include "libGeoIP.h"
 
 #ifdef __cplusplus
 extern "C" {

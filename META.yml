@@ -1,11 +1,11 @@
 # http://module-build.sourceforge.net/META-spec.html
 #XXXXXXX This is a prototype!!!  It will change in the future!!! XXXXX#
 name:         Apache-GeoIP
-version:      1.4
-version_from: Apache/GeoIP.pm
+version:      1.5
+version_from: Apache2/Apache/GeoIP.pm
 installdirs:  site
 requires:
-    mod_perl:                      1.26
+    mod_perl:                      1.99
 
 distribution_type: module
-generated_by: ExtUtils::MakeMaker version 6.21
+generated_by: ExtUtils::MakeMaker version 6.17

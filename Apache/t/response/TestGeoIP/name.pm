@@ -1,4 +1,4 @@
-package My::ip;
+package TestGeoIP::name;
 use Apache::Geo::IP;
 use strict;
 use warnings FATAL => 'all';
@@ -10,7 +10,7 @@ sub handler {
   $r->content_type('text/plain');
   $r->send_http_header;
   my $ip = $r->args;
-  my $country = uc($r->country_code_by_addr($ip));
+  my $country = uc($r->country_code_by_name($ip));
   
   $r->print($country);
   

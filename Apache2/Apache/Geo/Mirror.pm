@@ -2,21 +2,19 @@ package Apache::Geo::Mirror;
 
 use strict;
 use warnings;
-use vars qw($VERSION $GIP %lat %lon $MIRROR $NEARBY_CACHE $DEFAULT);
+use vars qw($VERSION $GIP %lat %lon $MIRROR $NEARBY_CACHE $DEFAULT $cfg);
 
-use POSIX;
+$VERSION = '1.5';
 
-$VERSION = '0.40';
-
-use Apache::RequestRec;
-use APR::URI;
+use Apache::RequestRec ();
+use APR::URI ();
 use Apache::Const -compile => qw(REMOTE_HOST REDIRECT);
-use Apache::RequestUtil;
-use APR::Table;
-use Apache::GeoIP;
-use Apache::Log;
+use Apache::RequestUtil ();
+use APR::Table ();
+use Apache::Log ();
 use Apache::Connection ();
 
+use Apache::GeoIP;
 my $GEOIP_DBFILE;
 
 @Apache::Geo::Mirror::ISA = qw(Apache::RequestRec);
@@ -54,19 +52,19 @@ sub init {
   my $file = $r->dir_config->get('GeoIPDBFile') || $GEOIP_DBFILE;
   if ($file)  {
     unless ( -e $file) {
-      $r->log_error("Cannot find GeoIP database file '$file'");
+      $r->log->error("Cannot find GeoIP database file '$file'");
       die;
     }
   }
   else {
-    $r->log_error("Must specify GeoIP database file");
+    $r->log->error("Must specify GeoIP database file");
     die;
   }
   
   my $flag = $r->dir_config->get('GeoIPFlag') || '';
   if ($flag) {
     unless ($flag =~ /^(STANDARD|MEMORY_CACHE|CHECK_CACHE)$/i) {
-      $r->log_error("GeoIP flag '$flag' not understood");
+      $r->log->error("GeoIP flag '$flag' not understood");
       die;
     }
   }
@@ -83,7 +81,7 @@ sub init {
   }
   
   unless ($GIP->{$loc} = Apache::GeoIP->open($file, $flag)) {
-    $r->log_error("Couldn't make GeoIP object");
+    $r->log->error("Couldn't make GeoIP object");
     die;
   }
   
@@ -99,11 +97,11 @@ sub init {
     $MIRROR->{$loc} = $mirror_data;
   }
   else {
-    $r->log_error("Please specify a mirror file");
+    $r->log->error("Please specify a mirror file");
     die;
   }
   $NEARBY_CACHE->{$loc} = {};
-  $DEFAULT->{$loc} = $r->dir_config('GeoIPDefault') || 'us';
+  $DEFAULT->{$loc} = $r->dir_config->get('GeoIPDefault') || 'us';
 }
 
 sub _random_mirror {
@@ -175,6 +173,7 @@ sub _find_nearby_country {
   my $closest_distance = 1_000_000_000;
   
   for (@candidate_countries) {
+    next unless (defined $lat{$_} and defined $lon{$_});
     my $distance = $self->_calculate_distance($country, $_);
     if ($distance < $closest_distance) {
       $closest_country = $_;
@@ -475,7 +474,7 @@ Apache::Geo::Mirror - Find closest Mirror
  # PerlModule Apache::HelloMirror
  #<Location /mirror>
  #   SetHandler perl-script
- #   PerlHandler Apache::HelloMirror
+ #   PerlResponseHandler Apache::HelloMirror
  #   PerlSetVar GeoIPDBFile "/usr/local/share/GeoIP/GeoIP.dat"
  #   PerlSetVar GeoIPFlag Standard
  #   PerlSetVar GeoIPMirror "/usr/local/share/data/mirror.txt"
@@ -524,7 +523,7 @@ in an Apache module.
      # continue along
   }
  
-The directives in F<httpd.conf> are as follows:
+The C<PerlSetVar> directives in F<httpd.conf> are as follows:
  
   <Location /mirror>
     PerlSetVar GeoIPDBFile "/usr/local/share/geoip/GeoIP.dat"
@@ -534,7 +533,7 @@ The directives in F<httpd.conf> are as follows:
     # other directives
   </Location>
  
-The C<PerlSetVar> directives available are
+The directives available are
 
 =over 4
 

@@ -92,6 +92,17 @@ push @$files_to_clean, 't/TEST';
 $config{LIBS} = WIN32 ? ' -lzlib' : ' -lz';
 $config{DEFINE} = qq{ -DGEOIPDATADIR=\\"$db_dir\\"} unless WIN32;
 
+my $have_stdint_h;
+my @inc = ($Config{usrinc});
+push @inc, split ' ', $Config{locincpth};
+for (@inc) {
+    if (-e "$_/stdint.h") {
+        $have_stdint_h = 1;
+        last;
+    }
+}
+$config{DEFINE} .= ' -DHAVE_STDINT_H' if $have_stdint_h;
+
 WriteMakefile(
 	      NAME           => 'Apache::GeoIP',
 	      VERSION_FROM   => "$libdir/GeoIP.pm",

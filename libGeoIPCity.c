@@ -1,5 +1,5 @@
 /* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 2; tab-width: 2 -*- */
-/* GeoIPCity.c
+/* libGeoIPCity.c
  *
  * Copyright (C) 2003 MaxMind LLC
  *
@@ -23,8 +23,17 @@
 #ifndef WIN32
 #include <netdb.h>
 #else
-#include <winsock2.h>
-#endif	/* WIN32 */
+#include <winsock.h>
+#endif
+#ifndef WIN32
+#include <netinet/in.h> /* For ntohl */
+#endif
+#include <sys/types.h> /* For uint32_t */
+#ifdef HAVE_STDINT_H
+#include <stdint.h>     /* For uint32_t */
+#else
+typedef unsigned int uint32_t;
+#endif
 
 const int FULL_RECORD_LENGTH = 50;
 
@@ -153,15 +162,11 @@ GeoIPRecord * GeoIP_record_by_name (GeoIP* gi, const char *name) {
 	if (name == NULL) {
 		return 0;
 	}
-	ipnum = _addr_to_num(name);
-	if (ipnum == 0) {
-		host = gethostbyname(name);
-		if (host == NULL) {
-			return 0;
-		}
-		ipnum = _h_addr_to_num((unsigned char *) host->h_addr_list[0]);
-		if(ipnum == 0) return 0;
+	host = gethostbyname(name);
+	if (host == NULL) {
+		return 0;
 	}
+	ipnum = ntohl(*((uint32_t*)host->h_addr_list[0]));
 	return _get_record(gi, ipnum);
 }
 

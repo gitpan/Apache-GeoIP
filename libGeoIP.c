@@ -1,5 +1,5 @@
 /* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 2; tab-width: 2 -*- */
-/* GeoIP.c
+/* libGeoIP.c
  *
  * Copyright (C) 2003 MaxMind LLC  All Rights Reserved.
  *
@@ -25,12 +25,22 @@
 #include <string.h>
 #ifndef WIN32
 #include <netdb.h>
-#else
-#include <winsock2.h>
 #endif
 #include <assert.h>
 #include <sys/types.h> /* for fstat */
 #include <sys/stat.h>	/* for fstat */
+#ifdef WIN32
+#include <windows.h>
+#endif
+
+#ifndef WIN32
+#include <netinet/in.h> /* For ntohl */
+#endif
+#ifdef HAVE_STDINT_H
+#include <stdint.h>     /* For uint32_t */
+#else
+typedef unsigned int uint32_t;
+#endif
 
 #define COUNTRY_BEGIN 16776960
 #define STATE_BEGIN_REV0 16700000
@@ -65,6 +75,7 @@ const char * GeoIPDBDescription[NUM_DB_TYPES] = {NULL, "GeoIP Country Edition", 
 #ifdef WIN32
 #define GEOIPDATADIR "%ProgramFiles%\\GeoIP"
 #endif
+
 char ** GeoIPDBFileName = NULL;
 
 #ifdef WIN32
@@ -265,42 +276,66 @@ void _setup_segments(GeoIP * gi) {
 }
 
 unsigned int _seek_record (GeoIP *gi, unsigned long ipnum) {
-	int i, j, depth;
-	unsigned int x[2];
-	unsigned char buf[2 * MAX_RECORD_LENGTH];
-	unsigned char *cache_buf = NULL;
+	int depth;
+	unsigned int x;
+	unsigned char stack_buffer[2 * MAX_RECORD_LENGTH];
+	const unsigned char *buf = (gi->cache == NULL) ? stack_buffer : NULL;
 	unsigned int offset = 0;
+
+	const unsigned char * p;
+	int j;
 
 	_check_mtime(gi);
 	for (depth = 31; depth >= 0; depth--) {
 		if (gi->cache == NULL) {
 			fseek(gi->GeoIPDatabase, (long)gi->record_length * 2 * offset, SEEK_SET);
-			fread(buf,gi->record_length,2,gi->GeoIPDatabase);
+			fread(stack_buffer,gi->record_length,2,gi->GeoIPDatabase);
 		} else {
-			cache_buf = gi->cache + (long)gi->record_length * 2 *offset;
-		}
-		for (i = 0; i < 2; i++) {
-			x[i] = 0;
-			for (j = 0; j < gi->record_length; j++) {
-				if (gi->cache == NULL) {
-					x[i] += (buf[gi->record_length * i + j] << (j * 8));
-				} else {
-					x[i] += (cache_buf[i*gi->record_length + j] << (j * 8));
-				}
-			}
+			buf = gi->cache + (long)gi->record_length * 2 *offset;
 		}
 
 		if (ipnum & (1 << depth)) {
-			if (x[1] >= gi->databaseSegments[0]) {
-				return x[1];
+			/* Take the right-hand branch */
+			if ( gi->record_length == 3 ) {
+				/* Most common case is completely unrolled and uses constants. */
+				x =   (buf[3*1 + 0] << (0*8))
+					+ (buf[3*1 + 1] << (1*8))
+					+ (buf[3*1 + 2] << (2*8));
+
+			} else {
+				/* General case */
+				j = gi->record_length;
+				p = &buf[2*j];
+				x = 0;
+				do {
+					x <<= 8;
+					x += *(--p);
+				} while ( --j );
 			}
-			offset = x[1];
+
 		} else {
-			if (x[0] >= gi->databaseSegments[0]) {
-				return x[0];
+			/* Take the left-hand branch */
+			if ( gi->record_length == 3 ) {
+				/* Most common case is completely unrolled and uses constants. */
+				x =   (buf[3*0 + 0] << (0*8))
+					+ (buf[3*0 + 1] << (1*8))
+					+ (buf[3*0 + 2] << (2*8));
+			} else {
+				/* General case */
+				j = gi->record_length;
+				p = &buf[1*j];
+				x = 0;
+				do {
+					x <<= 8;
+					x += *(--p);
+				} while ( --j );
 			}
-			offset = x[0];
 		}
+
+		if (x >= gi->databaseSegments[0]) {
+			return x;
+		}
+		offset = x;
 	}
 
 	/* shouldn't reach here */
@@ -340,19 +375,6 @@ unsigned long _addr_to_num (const char *addr) {
 			return 0;
 		}
 	}
-	return ipnum;
-}
-
-unsigned long _h_addr_to_num (unsigned char *addr) {
-	int i;
-	unsigned long ipnum = 0;
-	unsigned int octet;
-
-	for (i=0; i<4; i++) {
-		octet = addr[i];
-		ipnum += (octet << ((3-i)*8));
-	}
-	
 	return ipnum;
 }
 
@@ -434,10 +456,10 @@ void GeoIP_delete (GeoIP *gi) {
 		free(gi->file_path);
 	if (gi->databaseSegments != NULL)
 		free(gi->databaseSegments);
-	free(gi);
 #ifdef WIN32
 	WSACleanup( );
 #endif
+	free(gi);
 }
 
 const char *GeoIP_country_code_by_name (GeoIP* gi, const char *name) {
@@ -469,15 +491,11 @@ int GeoIP_id_by_name (GeoIP* gi, const char *name) {
 		printf("Invalid database type %s, expected %s\n", GeoIPDBDescription[(int)gi->databaseType], GeoIPDBDescription[GEOIP_COUNTRY_EDITION]);
 		return 0;
 	}
-	ipnum = _addr_to_num(name);
-	if (ipnum == 0) {
-		host = gethostbyname(name);
-		if (host == NULL) {
-			return 0;
-		}
-		ipnum = _h_addr_to_num((unsigned char *) host->h_addr_list[0]);
-		if (ipnum == 0) return 0;
+	host = gethostbyname(name);
+	if (host == NULL) {
+		return 0;
 	}
+	ipnum = ntohl(*((uint32_t*)host->h_addr_list[0]));
 	ret = _seek_record(gi, ipnum) - COUNTRY_BEGIN;
 	return ret;
 }
@@ -521,7 +539,6 @@ int GeoIP_id_by_addr (GeoIP* gi, const char *addr) {
 		return 0;
 	}
 	ipnum = _addr_to_num(addr);
-	if (ipnum == 0) return 0;
 	ret = _seek_record(gi, ipnum) - COUNTRY_BEGIN;
 	return ret;
 }
@@ -571,14 +588,15 @@ char *GeoIP_database_info (GeoIP* gi) {
 }
 
 /* GeoIP Region Edition functions */
-GeoIPRegion * _get_region(GeoIP* gi, unsigned long ipnum) {
-	GeoIPRegion * region;
+
+void GeoIP_assign_region_by_inetaddr(GeoIP* gi, unsigned long inetaddr, GeoIPRegion *region) {
 	unsigned int seek_region;
 
-	region = malloc(sizeof(GeoIPRegion));
+	/* This also writes in the terminating NULs (if you decide to
+	 * keep them) and clear any fields that are not set. */
 	memset(region, 0, sizeof(GeoIPRegion));
 
-	seek_region = _seek_record(gi, ipnum);
+	seek_region = _seek_record(gi, ntohl(inetaddr));
 
 	if (gi->databaseType == GEOIP_REGION_EDITION_REV0) {
 		/* Region Edition, pre June 2003 */
@@ -586,41 +604,42 @@ GeoIPRegion * _get_region(GeoIP* gi, unsigned long ipnum) {
 		if (seek_region >= 1000) {
 			region->country_code[0] = 'U';
 			region->country_code[1] = 'S';
-			region->country_code[2] = '\0';
-			region->region = malloc(sizeof(char) * 3);
 			region->region[0] = (char) ((seek_region - 1000)/26 + 65);
 			region->region[1] = (char) ((seek_region - 1000)%26 + 65);
-			region->region[2] = '\0';
 		} else {
-			strncpy(region->country_code, GeoIP_country_code[seek_region], 3);
-			region->region = NULL;
+			memcpy(region->country_code, GeoIP_country_code[seek_region], 2);
 		}
 	} else if (gi->databaseType == GEOIP_REGION_EDITION_REV1) {
 		/* Region Edition, post June 2003 */
 		seek_region -= STATE_BEGIN_REV1;
-		if (seek_region < CANADA_OFFSET) {
+		if (seek_region < US_OFFSET) {
+			/* Unknown */
+			/* we don't need to do anything here b/c we memset region to 0 */
+		} else if (seek_region < CANADA_OFFSET) {
 			/* USA State */
 			region->country_code[0] = 'U';
 			region->country_code[1] = 'S';
-			region->country_code[2] = '\0';
-			region->region = malloc(sizeof(char) * 3);
 			region->region[0] = (char) ((seek_region - US_OFFSET)/26 + 65);
 			region->region[1] = (char) ((seek_region - US_OFFSET)%26 + 65);
-			region->region[2] = '\0';
 		} else if (seek_region < WORLD_OFFSET) {
 			/* Canada Province */
 			region->country_code[0] = 'C';
 			region->country_code[1] = 'A';
-			region->country_code[2] = '\0';
-			region->region = malloc(sizeof(char) * 3);
 			region->region[0] = (char) ((seek_region - CANADA_OFFSET)/26 + 65);
 			region->region[1] = (char) ((seek_region - CANADA_OFFSET)%26 + 65);
-			region->region[2] = '\0';
 		} else {
 			/* Not US or Canada */
-			strncpy(region->country_code, GeoIP_country_code[(seek_region - WORLD_OFFSET) / FIPS_RANGE], 3);
-			region->region = NULL;
+			memcpy(region->country_code, GeoIP_country_code[(seek_region - WORLD_OFFSET) / FIPS_RANGE], 2);
 		}
+	}
+}
+
+GeoIPRegion * _get_region(GeoIP* gi, unsigned long ipnum) {
+	GeoIPRegion * region;
+ 
+	region = malloc(sizeof(GeoIPRegion));
+	if (region) {
+		GeoIP_assign_region_by_inetaddr(gi, htonl(ipnum), region);
 	}
 	return region;
 }
@@ -636,7 +655,6 @@ GeoIPRegion * GeoIP_region_by_addr (GeoIP* gi, const char *addr) {
 		return 0;
 	}
 	ipnum = _addr_to_num(addr);
-	if (ipnum == 0) return 0;
 	return _get_region(gi, ipnum);
 }
 
@@ -651,21 +669,15 @@ GeoIPRegion * GeoIP_region_by_name (GeoIP* gi, const char *name) {
 		printf("Invalid database type %s, expected %s\n", GeoIPDBDescription[(int)gi->databaseType], GeoIPDBDescription[GEOIP_REGION_EDITION_REV1]);
 		return 0;
 	}
-	ipnum = _addr_to_num(name);
-	if (ipnum == 0) {
-		host = gethostbyname(name);
-		if (host == NULL) {
-			return 0;
-		}
-		ipnum = _h_addr_to_num((unsigned char *) host->h_addr_list[0]);
-		if (ipnum == 0) return 0;
+	host = gethostbyname(name);
+	if (host == NULL) {
+		return 0;
 	}
+	ipnum = ntohl(*((uint32_t*)host->h_addr_list[0]));
 	return _get_region(gi, ipnum);
 }
 
 void GeoIPRegion_delete (GeoIPRegion *gir) {
-	if (gir->region != NULL)
-			free(gir->region);
 	free(gir);
 }
 
@@ -683,7 +695,7 @@ char *_get_name (GeoIP* gi, unsigned long ipnum) {
 		return 0;
 	}
 
-	seek_org = _seek_record(gi, ipnum);
+        seek_org = _seek_record(gi, ipnum);
 	if (seek_org == gi->databaseSegments[0])		
 		return NULL;
 
@@ -708,7 +720,6 @@ char *GeoIP_name_by_addr (GeoIP* gi, const char *addr) {
 		return 0;
 	}
 	ipnum = _addr_to_num(addr);
-	if (ipnum == 0) return 0;
 	return _get_name(gi, ipnum);
 }
 
@@ -718,15 +729,11 @@ char *GeoIP_name_by_name (GeoIP* gi, const char *name) {
 	if (name == NULL) {
 		return 0;
 	}
-	ipnum = _addr_to_num(name);
-	if (ipnum == 0) {
-		host = gethostbyname(name);
-		if (host == NULL) {
-			return 0;
-		}
-		ipnum = _h_addr_to_num((unsigned char *) host->h_addr_list[0]);
-		if (ipnum == 0) return 0;
+	host = gethostbyname(name);
+	if (host == NULL) {
+		return 0;
 	}
+	ipnum = ntohl(*((uint32_t*)host->h_addr_list[0]));
 	return _get_name(gi, ipnum);
 }
 

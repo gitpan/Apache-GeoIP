@@ -1,5 +1,17 @@
 Revision history for Perl extension Apache::Geo::IP.
 
+1.4 Sun Dec 07 15:13:00 2003
+
+  - for mp2, need Apache::Connection in Apache::Geo::IP
+    [Enrico Sorcinelli]
+  - upgrade libGeo.[ch] and libGeoIPCity.[ch] to
+    GeoIP-1.3.1
+
+1.215 Sat Sep 27 20:05:00 2003
+
+  - ensure GEOIP flags are numeric
+  - allow multiple automatic mirror configurations
+
 1.21 Sun Sep 01 19:04:00 2003
 
   - update to version 1.21 of Geo::IP

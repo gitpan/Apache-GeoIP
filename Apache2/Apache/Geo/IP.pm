@@ -7,13 +7,14 @@ use Apache::Const -compile => qw(REMOTE_HOST);  # constants
 use Apache::RequestUtil ();                     # $r->dir_config
 use APR::Table;                                 # dir_config->get
 use Apache::Log;                                # log_error
+use Apache::Connection ();
 use vars qw($VERSION $gip);
 
 use Apache::GeoIP;
 
 @Apache::Geo::IP::ISA = qw(Apache::RequestRec);
 
-$VERSION = '1.215';
+$VERSION = '1.4';
 
 my $GEOIP_DBFILE;
 

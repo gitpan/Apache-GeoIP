@@ -1,5 +1,5 @@
 /* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 2; tab-width: 2 -*- */
-/* GeoIPCity.h
+/* libGeoIPCity.h
  *
  * Copyright (C) 2003 MaxMind LLC  All rights reserved.
  *
@@ -21,7 +21,7 @@
 #ifndef GEOIPCITY_H
 #define GEOIPCITY_H
 
-#include "libGeoIP.h"
+#include "GeoIP.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -34,8 +34,8 @@ typedef struct GeoIPRecordTag {
 	char *region;
 	char *city;
 	char *postal_code;
-        double latitude;
-        double longitude;
+	double latitude;
+	double longitude;
 	int dma_code;
 	int area_code;
 } GeoIPRecord;

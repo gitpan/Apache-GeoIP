@@ -15,6 +15,7 @@ use Apache::RequestUtil;
 use APR::Table;
 use Apache::GeoIP;
 use Apache::Log;
+use Apache::Connection ();
 
 my $GEOIP_DBFILE;
 

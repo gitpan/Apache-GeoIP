@@ -6,6 +6,7 @@ use Apache::RequestRec;
 use Apache::RequestUtil;
 use APR::Table;
 use Apache::Log;
+use Apache::Connection ();
 use vars qw($VERSION $record $gir);
 
 my $GEOIP_DBCITYFILE;

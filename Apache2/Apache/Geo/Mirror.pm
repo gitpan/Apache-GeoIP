@@ -10,7 +10,10 @@ $VERSION = '0.10';
 use Apache::RequestRec;
 use APR::URI;
 use Apache::Const -compile => qw(REMOTE_HOST REDIRECT);
+use Apache::RequestUtil;
+use APR::Table;
 use Apache::GeoIP;
+use Apache::Log;
 
 my $GEOIP_DBFILE;
 
@@ -38,19 +41,19 @@ sub init {
   my $file = $r->dir_config->get('GeoIPDBFile') || $GEOIP_DBFILE;
   if ($file)  {
     unless ( -e $file) {
-      $r->log->error("Cannot find GeoIP database file '$file'");
+      $r->log_error("Cannot find GeoIP database file '$file'");
       die;
     }
   }
   else {
-    $r->log->error("Must specify GeoIP database file");
+    $r->log_error("Must specify GeoIP database file");
     die;
   }
 
   my $flag = $r->dir_config->get('GeoIPFlag');
     if ($flag) {
       unless ($flag =~ /^(STANDARD|MEMORY_CACHE)$/i) {
-	$r->log->error("GeoIP flag '$flag' not understood");
+        $r->log_error("GeoIP flag '$flag' not understood");
 	die;
       }
       $flag = 'GEOIP_' . uc($flag);
@@ -60,7 +63,7 @@ sub init {
   }
   
   unless ($gip = Apache::GeoIP->open($file, $flag)) {
-    $r->log->error("Couldn't make GeoIP object");
+    $r->log_error("Couldn't make GeoIP object");
     die;
   }
   
@@ -74,10 +77,10 @@ sub init {
     close MIRROR;
   }
   else {
-    $r->log->error("Please specify a mirror file");
+    $r->log_error("Please specify a mirror file");
     die;
   }
-  $default = $r->dir_config('GeoIPDefault') || 'us';
+  $default = $r->dir_config->get('GeoIPDefault') || 'us';
 }
 
 sub _random_mirror {

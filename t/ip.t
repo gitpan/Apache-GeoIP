@@ -5,9 +5,7 @@ use Apache::Test;
 use Apache::TestUtil;
 use Apache::TestRequest 'GET_BODY';
 
-plan tests => 20; # plan one test.
-
-Apache::TestRequest::module('default');
+plan tests => 22;   # plan one test.
 
 my $config   = Apache::Test::config();
 my $hostport = Apache::TestRequest::hostport($config) || '';
@@ -17,13 +15,13 @@ while (<DATA>) {
   chomp;
   my ($ipaddr, $exp_country) = split("\t");
  
- my $received = GET_BODY "/TestApache::name?$ipaddr";
-my $expected = $exp_country;
+ my $received = GET_BODY "/ip?$ipaddr";
+ my $expected = $exp_country;
   
 ok t_cmp(
         $expected,
         $received,
-        "testing TestApache::name with $ipaddr",
+        "testing ip with $ipaddr",
         );
 
 }
@@ -39,13 +37,15 @@ __DATA__
 194.244.83.2	IT
 203.15.106.23	AU
 196.31.1.1	ZA
-yahoo.com	US
-www.bundesregierung.de	DE
-www.thaigov.go.th	TH
-www.gov.ru	RU
-www.parliament.ge	GE
-www.cpv.org.vn	VN
-alfa.nic.in	IN
-io.uwinnipeg.ca	CA
-www.maxmind.com	US
-q.r.nosuchdomain	
+210.54.22.1	NZ
+210.25.5.5	CN
+210.54.122.1	NZ
+210.25.15.5	CN
+192.37.51.100	CH
+192.37.150.150	CH
+192.106.51.100	IT
+192.106.150.150	IT
+63.250.206.138	US
+80.58.1.44	ES
+213.36.82.227	FR
+948.122.111.111	

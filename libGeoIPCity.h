@@ -28,8 +28,8 @@ typedef struct GeoIPRecordTag {
 	char *region;
 	char *city;
 	char *postal_code;
-	float latitude;
-	float longitude;
+        double latitude;
+        double longitude;
 } GeoIPRecord;
 
 GeoIPRecord * GeoIP_record_by_addr (GeoIP* gi, const char *addr);

@@ -168,7 +168,7 @@ _postal_code(gir)
     OUTPUT:
 	RETVAL
 
-float
+double
 _latitude(gir)
 	GeoIPRecord *gir
     CODE:
@@ -176,7 +176,7 @@ _latitude(gir)
     OUTPUT:
 	RETVAL
 
-float
+double
 _longitude(gir)
 	GeoIPRecord *gir
     CODE:

@@ -1,6 +1,12 @@
 Revision history for Perl extension Apache::Geo::IP.
 
-1.11 Wed Dec 12 11:42:48 2002
+1.13 Wed Mar 11 11:41:00 2003
+
+  - update libGeoIP.c and libGeoIPCity.c
+  - fix tests
+  - load relevant Apache::* modules for mod_perl 2 version
+
+1.12 Wed Dec 12 11:42:48 2002
 
   - update to sync with Geo::IP version 1.11, including City interface
 

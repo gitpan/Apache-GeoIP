@@ -1,4 +1,4 @@
-package TestApache::mirror;
+package My::mirror;
 use Apache::Geo::Mirror;
 use strict;
 use warnings FATAL => 'all';

@@ -3,6 +3,9 @@ package Apache::Geo::IP::Record;
 use Apache::GeoIP;
 use strict;
 use Apache::RequestRec;
+use Apache::RequestUtil;
+use APR::Table;
+use Apache::Log;
 use vars qw($VERSION $record $gir);
 
 my $GEOIP_DBCITYFILE;
@@ -27,7 +30,7 @@ sub init {
   my $file = $r->dir_config->get('GeoIPDBCityFile') || $GEOIP_DBCITYFILE;
   if ($file) {
     unless (-e $file) {
-      $r->warn("Cannot find GeoIPCity database file '$file'");
+      $r->log_error("Cannot find GeoIPCity database file '$file'");
       die;
     }
   }
@@ -39,7 +42,7 @@ sub init {
   my $flag = $r->dir_config->get('GeoIPFlag');
   if ($flag) {
     unless ($flag =~ /^(STANDARD|MEMORY_CACHE)$/i) {
-      $r->warn("GeoIP flag '$flag' not understood");
+      $r->log_error("GeoIP flag '$flag' not understood");
       die;
     }
     $flag = 'GEOIP_' . uc($flag);
@@ -48,11 +51,11 @@ sub init {
     $flag = 'GEOIP_STANDARD';
   }
   unless ($gir = Apache::GeoIP->open($file, $flag)) {
-    $r->warn("Couldn't make GeoIP record object");
+    $r->log_error("Couldn't make GeoIP record object");
     die;
   }
   unless (make_record($r->connection->remote_ip)) {
-    $r->warn("Couldn't make GeoIP record");
+    $r->log_error("Couldn't make GeoIP record");
     die;
   }
 }

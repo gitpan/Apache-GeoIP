@@ -6,7 +6,7 @@ require DynaLoader;
 
 @Apache::GeoIP::ISA = qw(DynaLoader);
 
-$VERSION = '1.12';
+$VERSION = '1.13';
 
 __PACKAGE__->bootstrap($VERSION);
 
@@ -27,6 +27,9 @@ Free monthly updates to the database are available from
 This free database is similar to the database contained in IP::Country, as 
 well as many paid databases. It uses ARIN, RIPE, APNIC, and LACNIC whois to 
 obtain the IP->Country mappings.
+
+For Win32 users, the F<GeoIP.dat> database file is expected
+to reside in the F</Program Files/GeoIP/> directory.
 
 If you require greater accuracy, MaxMind offers a Premium database on a paid 
 subscription basis. 

@@ -13,7 +13,8 @@ use constant WIN32 => ($^O =~ /Win32/i);
 my (%config, $ans, $GEOIP_DBFILE, $GEOIP_DBCITYFILE, @src_files);
 my $db_file = 'GeoIP.dat';
 my $city_file = 'GeoIPCity.dat';
-my $db_dir = WIN32 ? '/WINDOWS/System32' : '/usr/local/share/GeoIP';
+my $db_dir = WIN32 ? $ENV{ProgramFiles} . '/GeoIP' : '/usr/local/share/GeoIP';
+$db_dir =~ s!\\!/!g;
 
 if (-d $db_dir) {
   if (-e "$db_dir/$db_file") {
@@ -59,7 +60,8 @@ unless ($GEOIP_DBCITYFILE) {
 }
 
 sub place_db {
-  my $wanted = prompt('Where should I install GeoIP.dat?', $db_dir);
+  my $wanted = WIN32 ? $db_dir :
+    prompt('Where should I install GeoIP.dat?', $db_dir);
   $wanted =~ s!\\!/!g;
   $wanted =~ s!/$!!;
   if (-d $wanted) {
@@ -95,17 +97,12 @@ sub place_db {
 
 
 my $objs = 'libGeoIP.o libGeoIPCity.o GeoIP.o';
-$objs .= ' snprintf.o' if WIN32;
 
-my $cwd = cwd;
-my $var = qq{\n\nPerlSetVar GeoIPMirror "$cwd/t/conf/cpan_mirror.txt"};
 my $to_edit = { 'Mirror.pm' => 
 		{'my $GEOIP_DBFILE;' => 
 		 qq{my \$GEOIP_DBFILE = "$GEOIP_DBFILE";}},
 		'IP.pm' => {'my $GEOIP_DBFILE;' => 
-		 qq{my \$GEOIP_DBFILE = "$GEOIP_DBFILE";}},
-		'mirror.pm' => {'__END__' => "__END__$var"},
-		'extra.conf.in' => {'PERL5LIB' => "PERL5LIB $cwd/blib/lib"},
+			    qq{my \$GEOIP_DBFILE = "$GEOIP_DBFILE";}},
 	      };
 
 if (my $GEOIP_DBCITYFILE) {
@@ -118,14 +115,7 @@ my $mpv = ($libdir eq 'Apache') ? 1.26 : 1.99;
 push @$files_to_clean, 't/TEST';
 
 $config{LIBS} = WIN32 ? ' -lzlib' : ' -lz';
-
-my $datadir = $db_dir;
-if (WIN32) {
-  $datadir =~ s!/!\\!g;
-  $datadir =~ s!\\!\\\\!g;
-}
-
-$config{DEFINE} = qq{ -DGEOIPDATADIR=\\"$datadir\\"};
+$config{DEFINE} = qq{ -DGEOIPDATADIR=\\"$db_dir\\"} unless WIN32;
 
 WriteMakefile(
 	      NAME           => 'Apache::GeoIP',

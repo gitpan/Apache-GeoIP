@@ -1,9 +1,11 @@
-package TestApache::mirror;
+package My::mirror;
 use Apache::Geo::Mirror;
 use strict;
 use warnings FATAL => 'all';
 
 use Apache::Const -compile => 'OK';
+use Apache::RequestIO ();   # for $r->print
+use Apache::RequestRec ();  # for $r->content_type
 
 sub handler {
   my $r = Apache::Geo::Mirror->new(shift);

@@ -1,8 +1,11 @@
 package Apache::Geo::IP;
 
 use strict;
-use Apache::RequestRec;
-use Apache::Const -compile => qw(REMOTE_HOST);
+use Apache::RequestRec;                         # $r
+use Apache::Const -compile => qw(REMOTE_HOST);  # constants
+use Apache::RequestUtil ();                     # $r->dir_config
+use APR::Table;                                 # dir_config->get
+use Apache::Log;                                # log_error
 use vars qw($VERSION $gip);
 
 use Apache::GeoIP;
@@ -28,19 +31,19 @@ sub init {
   my $file = $r->dir_config->get('GeoIPDBFile') || $GEOIP_DBFILE;
   if ($file) {
     unless ( -e $file) {
-      $r->log->error("Cannot find GeoIP database file '$file'");
+      $r->log_error("Cannot find GeoIP database file '$file'");
       die;
     }
   }
   else {
-    $r->log->error("Must specify GeoIP database file");
+    $r->log_error("Must specify GeoIP database file");
     die;
   }
 
   my $flag = $r->dir_config->get('GeoIPFlag');
   if ($flag) {
     unless ($flag =~ /^(STANDARD|MEMORY_CACHE)$/i) {
-      $r->log->error("GeoIP flag '$flag' not understood");
+      $r->log_error("GeoIP flag '$flag' not understood");
       die;
     }
     $flag = 'GEOIP_' . uc($flag);
@@ -50,7 +53,7 @@ sub init {
   }
 
   unless ($gip = Apache::GeoIP->open($file, $flag)) {
-    $r->log->error("Couldn't make GeoIP object");
+    $r->log_error("Couldn't make GeoIP object");
     die;
   }
 }

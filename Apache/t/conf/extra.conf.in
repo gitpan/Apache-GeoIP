@@ -1,4 +1,20 @@
-#PerlSwitches -I@ServerRoot@/../lib
-#PerlModule Apache2
-#PerlModule Apache::Geo::IP
+#PerlSwitches -Mblib="../../"
+PerlModule Apache::Geo::IP
+
+<Location /ip>
+  SetHandler perl-script
+  PerlHandler My::ip
+</Location>
+
+<Location /name>
+  SetHandler perl-script
+  PerlHandler My::name
+</Location>
+
+<Location /mirror>
+  SetHandler perl-script
+  PerlHandler My::mirror
+  PerlSetVar GeoIPMirror "@ServerRoot@/conf/cpan_mirror.txt"
+</Location>
+
 

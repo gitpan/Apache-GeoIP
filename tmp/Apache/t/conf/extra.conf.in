@@ -1,0 +1,4 @@
+#PerlSwitches -I@ServerRoot@/../lib
+#PerlModule Apache2
+#PerlModule Apache::Geo::IP
+

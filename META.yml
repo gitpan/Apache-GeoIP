@@ -1,0 +1,10 @@
+#XXXXXXX This is a prototype!!!  It will change in the future!!! XXXXX#
+name:         Apache-GeoIP
+version:      1.21
+version_from: Apache/GeoIP.pm
+installdirs:  site
+requires:
+    mod_perl:                      1.26
+
+distribution_type: module
+generated_by: ExtUtils::MakeMaker version 6.13

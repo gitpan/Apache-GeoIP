@@ -1,5 +1,10 @@
 Revision history for Perl extension Apache::Geo::IP.
 
+1.21 Sun Sep 01 19:04:00 2003
+
+  - update to version 1.21 of Geo::IP
+  - fix warning in Mirror.pm
+
 1.13 Wed Mar 11 11:41:00 2003
 
   - update libGeoIP.c and libGeoIPCity.c

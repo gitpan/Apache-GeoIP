@@ -16,6 +16,9 @@ use Apache::URI;
 @Apache::Geo::Mirror::ISA = qw(Apache);
 
 use constant PI => 3.14159265358979323846;
+use constant GEOIP_STANDARD => 0;
+use constant GEOIP_MEMORY_CACHE => 1;
+use constant GEOIP_CHECK_CACHE => 2;
 
 while (<DATA>) {
   my ($country, $lat, $lon) = split(':');
@@ -48,7 +51,7 @@ sub init {
 
   my $flag = $r->dir_config('GeoIPFlag');
     if ($flag) {
-      unless ($flag =~ /^(STANDARD|MEMORY_CACHE)$/i) {
+      unless ($flag =~ /^(STANDARD|MEMORY_CACHE|CHECK_CACHE)$/i) {
 	$r->warn("GeoIP flag '$flag' not understood");
 	die;
       }
@@ -156,7 +159,7 @@ sub auto_redirect : method {
   my $uri = Apache::URI->parse($r, $mirror);
   $uri->path($uri->path . $r->path_info);
   my $where = $uri->unparse;
-  $r->warn("$where $host");
+#  $r->warn("$where $host");
   $r->headers_out->set(Location => $uri->unparse);
   return REDIRECT;
 }
@@ -503,6 +506,9 @@ upon installing the module.
 
 This can be set to I<STANDARD>, or for faster performance
 but at a cost of using more memory, I<MEMORY_CACHE>.
+When using memory
+cache you can force a reload if the file is updated by 
+using I<CHECK_CACHE>.
 If not specified, I<STANDARD> is used.
 
 =item PerlSetVar GeoIPMirror "/path/to/mirror.txt"

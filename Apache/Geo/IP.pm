@@ -10,10 +10,11 @@ my $GEOIP_DBFILE;
 
 @Apache::Geo::IP::ISA = qw(Apache);
 
-$VERSION = '1.12';
+$VERSION = '1.21';
 
-sub GEOIP_STANDARD(){0;}
-sub GEOIP_MEMORY_CACHE(){1;}
+use constant GEOIP_STANDARD => 0;
+use constant GEOIP_MEMORY_CACHE => 1;
+use constant GEOIP_CHECK_CACHE => 2;
 
 sub new {
   my ($class, $r) = @_;
@@ -39,7 +40,7 @@ sub init {
   
   my $flag = $r->dir_config('GeoIPFlag');
   if ($flag) {
-    unless ($flag =~ /^(STANDARD|MEMORY_CACHE)$/i) {
+    unless ($flag =~ /^(STANDARD|MEMORY_CACHE|CHECK_CACHE)$/i) {
       $r->warn("GeoIP flag '$flag' not understood");
       die;
     }
@@ -141,6 +142,10 @@ closest mirror, to analyze your web server logs
 to determine the countries of your visiters, for credit card fraud
 detection, and for software export controls.
 
+If you are on Win32 and have installed this package using the
+ActivePerl ppm utility, the database F<GeoIP.dat> is expected
+to be found under the F<C:\Program Files\GeoIP\> directory.
+
 To find a country for an IP address, this module a finds the Network
 that contains the IP address, then returns the country the Network is
 assigned to.
@@ -183,6 +188,9 @@ upon installing the module.
 
 This can be set to I<STANDARD>, or for faster performance
 but at a cost of using more memory, I<MEMORY_CACHE>.
+When using memory
+cache you can force a reload if the file is updated by 
+using I<CHECK_CACHE>.
 If not specified, I<STANDARD> is used.
 
 =back

@@ -9,10 +9,10 @@ use File::Basename;
 require 5.006001;
 
 use constant WIN32 => ($^O =~ /Win32/i);
+require Win32 if WIN32;
 
 my (%config, $ans, $GEOIP_DBFILE, $GEOIP_DBCITYFILE, @src_files);
 my $db_file = 'GeoIP.dat';
-my $city_file = 'GeoIPCity.dat';
 my $db_dir = WIN32 ? $ENV{ProgramFiles} . '/GeoIP' : '/usr/local/share/GeoIP';
 $db_dir =~ s!\\!/!g;
 
@@ -33,30 +33,6 @@ if (-d $db_dir) {
 }
 else {
   place_db();
-}
-
-if (-d $db_dir) {
-  if (-e "$db_dir/$city_file") {
-    $ans = prompt("Should I use the GeoIPCity.dat under $db_dir?", 'yes');
-    if ($ans =~ /^y/i) {
-      $GEOIP_DBCITYFILE = $db_dir . '/' . $city_file;
-    }
-  }
-}
-
-unless ($GEOIP_DBCITYFILE) {
-  $ans = prompt("Do you have the GeoIPCity.dat database?", 'no');
-  if ($ans =~ /^y/i) {
-    my $dir = prompt("In which directory is it located?", $db_dir);
-    $dir =~ s!\\!/!g;
-    $dir =~ s!/$!!;
-    if (-e "$dir/$city_file") {
-      $GEOIP_DBCITYFILE = $dir . '/' . $city_file;
-    }
-    else {
-      warn("Cannot find $city_file under $dir -- ignoring ...");
-    }
-  }
 }
 
 sub place_db {
@@ -95,8 +71,12 @@ sub place_db {
   }
 }
 
-
 my $objs = 'libGeoIP.o libGeoIPCity.o GeoIP.o';
+
+if (WIN32) {
+  $GEOIP_DBFILE = Win32::GetShortPathName($GEOIP_DBFILE)
+    if $GEOIP_DBFILE =~ / /;
+}
 
 my $to_edit = { 'Mirror.pm' => 
 		{'my $GEOIP_DBFILE;' => 
@@ -104,11 +84,6 @@ my $to_edit = { 'Mirror.pm' =>
 		'IP.pm' => {'my $GEOIP_DBFILE;' => 
 			    qq{my \$GEOIP_DBFILE = "$GEOIP_DBFILE";}},
 	      };
-
-if (my $GEOIP_DBCITYFILE) {
-  $to_edit->{'Record.pm'}->{'my $GEOIP_DBCITYFILE;'} =
-    qq{my \$GEOIP_DBCITYFILE = "$GEOIP_DBCITYFILE";};
-}
 
 my ($libdir, $files_to_clean) = mp_copy($to_edit);
 my $mpv = ($libdir eq 'Apache') ? 1.26 : 1.99;

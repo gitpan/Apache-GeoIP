@@ -1,7 +1,7 @@
 /* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 2; tab-width: 2 -*- */
 /* GeoIP.h
  *
- * Copyright (C) 2002 MaxMind.com
+ * Copyright (C) 2003 MaxMind LLC
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public
@@ -35,6 +35,7 @@ extern "C" {
 #define STANDARD_RECORD_LENGTH 3
 #define ORG_RECORD_LENGTH 4
 #define MAX_RECORD_LENGTH 4
+#define NUM_DB_TYPES 16
 
 typedef struct GeoIPTag {
   FILE *GeoIPDatabase;
@@ -45,6 +46,7 @@ typedef struct GeoIPTag {
 	time_t mtime;
 	int flags;
 	char record_length;
+	int record_iter; /* used in GeoIP_next_record */
 } GeoIP;
 
 typedef struct GeoIPRegionTag {
@@ -59,43 +61,80 @@ typedef enum {
 } GeoIPOptions;
 
 typedef enum {
-	GEOIP_COUNTRY_EDITION = 106,
-	GEOIP_REGION_EDITION  = 112,
-	GEOIP_CITY_EDITION    = 111,
-	GEOIP_ORG_EDITION     = 110,
+	GEOIP_COUNTRY_EDITION     = 1,
+	GEOIP_REGION_EDITION_REV0 = 7,
+	GEOIP_CITY_EDITION_REV0   = 6,
+	GEOIP_ORG_EDITION         = 5,
+	GEOIP_ISP_EDITION         = 4,
+	GEOIP_CITY_EDITION_REV1   = 2,
+	GEOIP_REGION_EDITION_REV1 = 3,
+	GEOIP_PROXY_EDITION       = 8,
+	GEOIP_ASNUM_EDITION       = 9,
 } GeoIPDBTypes;
 
-extern const char *GeoIPDBFileName;
+typedef enum {
+	GEOIP_ANON_PROXY = 1,
+	GEOIP_HTTP_X_FORWARDED_FOR_PROXY = 2,
+	GEOIP_HTTP_CLIENT_IP_PROXY = 3,
+} GeoIPProxyTypes;
+
+#ifndef WIN32
+extern char **GeoIPDBFileName;
+#endif
+extern const char * GeoIPDBDescription[NUM_DB_TYPES];
+extern const char *GeoIPCountryDBFileName;
+extern const char *GeoIPRegionDBFileName;
+extern const char *GeoIPCityDBFileName;
+extern const char *GeoIPOrgDBFileName;
+extern const char *GeoIPISPDBFileName;
 
 extern const char GeoIP_country_code[247][3];
 extern const char GeoIP_country_code3[247][4];
 extern const char * GeoIP_country_name[247];
+extern const char GeoIP_country_continent[247][3];
 
-GeoIP* GeoIP_new(int flags);
-GeoIP* GeoIP_open(const char * filename, int flags);
-void GeoIP_delete(GeoIP* gi);
-const char *GeoIP_country_code_by_addr (GeoIP* gi, const char *addr);
-const char *GeoIP_country_code_by_name (GeoIP* gi, const char *host);
-const char *GeoIP_country_code3_by_addr (GeoIP* gi, const char *addr);
-const char *GeoIP_country_code3_by_name (GeoIP* gi, const char *host);
-const char *GeoIP_country_name_by_addr (GeoIP* gi, const char *addr);
-const char *GeoIP_country_name_by_name (GeoIP* gi, const char *host);
-int GeoIP_country_id_by_addr (GeoIP* gi, const char *addr);
-int GeoIP_country_id_by_name (GeoIP* gi, const char *host);
+#ifdef WIN32
+#define GEOIP_API __declspec(dllexport)
+#else
+#define GEOIP_API
+#endif  /* DLL */
 
-GeoIPRegion * GeoIP_region_by_addr (GeoIP* gi, const char *addr);
-GeoIPRegion * GeoIP_region_by_name (GeoIP* gi, const char *host);
-void GeoIPRegion_delete (GeoIPRegion *gir);
+GEOIP_API GeoIP* GeoIP_open_type (int type, int flags);
+GEOIP_API GeoIP* GeoIP_new(int flags);
+GEOIP_API GeoIP* GeoIP_open(const char * filename, int flags);
+GEOIP_API int GeoIP_db_avail(int type);
+GEOIP_API void GeoIP_delete(GeoIP* gi);
+GEOIP_API const char *GeoIP_country_code_by_addr (GeoIP* gi, const char *addr);
+GEOIP_API const char *GeoIP_country_code_by_name (GeoIP* gi, const char *host);
+GEOIP_API const char *GeoIP_country_code3_by_addr (GeoIP* gi, const char *addr);
+GEOIP_API const char *GeoIP_country_code3_by_name (GeoIP* gi, const char *host);
+GEOIP_API const char *GeoIP_country_name_by_addr (GeoIP* gi, const char *addr);
+GEOIP_API const char *GeoIP_country_name_by_name (GeoIP* gi, const char *host);
 
-char *GeoIP_org_by_addr (GeoIP* gi, const char *addr);
-char *GeoIP_org_by_name (GeoIP* gi, const char *host);
+/* Deprecated - for backwards compatibility only */
+GEOIP_API int GeoIP_country_id_by_addr (GeoIP* gi, const char *addr);
+GEOIP_API int GeoIP_country_id_by_name (GeoIP* gi, const char *host);
+GEOIP_API char *GeoIP_org_by_addr (GeoIP* gi, const char *addr);
+GEOIP_API char *GeoIP_org_by_name (GeoIP* gi, const char *host);
+/* End deprecated */
 
-char *GeoIP_database_info (GeoIP* gi);
-unsigned char GeoIP_database_edition (GeoIP* gi);
+GEOIP_API int GeoIP_id_by_addr (GeoIP* gi, const char *addr);
+GEOIP_API int GeoIP_id_by_name (GeoIP* gi, const char *host);
 
-unsigned int _seek_country (GeoIP *gi, unsigned long ipnum);
-unsigned long _addr_to_num (const char *addr);
-unsigned long _h_addr_to_num (unsigned char *addr);
+GEOIP_API GeoIPRegion * GeoIP_region_by_addr (GeoIP* gi, const char *addr);
+GEOIP_API GeoIPRegion * GeoIP_region_by_name (GeoIP* gi, const char *host);
+GEOIP_API void GeoIPRegion_delete (GeoIPRegion *gir);
+
+/* Used to query GeoIP Organization, ISP and AS Number databases */
+GEOIP_API char *GeoIP_name_by_addr (GeoIP* gi, const char *addr);
+GEOIP_API char *GeoIP_name_by_name (GeoIP* gi, const char *host);
+
+GEOIP_API char *GeoIP_database_info (GeoIP* gi);
+GEOIP_API unsigned char GeoIP_database_edition (GeoIP* gi);
+
+GEOIP_API unsigned int _seek_record (GeoIP *gi, unsigned long ipnum);
+GEOIP_API unsigned long _addr_to_num (const char *addr);
+GEOIP_API unsigned long _h_addr_to_num (unsigned char *addr);
 
 #ifdef BSD
 #define memcpy(dest, src, n) bcopy(src, dest, n)

@@ -34,3 +34,4 @@ t/ip.t
 t/name.t
 t/mirror.t
 
+META.yml                                Module meta-data (added by MakeMaker)

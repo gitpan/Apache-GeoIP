@@ -5,7 +5,7 @@ use Apache::Test;
 use Apache::TestUtil;
 use Apache::TestRequest 'GET_BODY';
 
-plan tests => 20; # plan one test.
+plan tests => 19; # plan one test.
 
 my $config   = Apache::Test::config();
 my $hostport = Apache::TestRequest::hostport($config) || '';
@@ -43,7 +43,6 @@ www.thaigov.go.th	TH
 www.gov.ru	RU
 www.parliament.ge	GE
 www.cpv.org.vn	VN
-alfa.nic.in	IN
 io.uwinnipeg.ca	CA
 www.maxmind.com	US
 q.r.nosuchdomain	

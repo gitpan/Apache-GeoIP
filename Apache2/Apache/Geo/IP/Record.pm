@@ -12,10 +12,11 @@ my $GEOIP_DBCITYFILE;
 
 @Apache::Geo::IP::Record::ISA = qw(Apache::RequestRec);
 
-$VERSION = '1.12';
+$VERSION = '1.21';
 
 sub GEOIP_STANDARD(){0;}
 sub GEOIP_MEMORY_CACHE(){1;}
+sub GEOIP_CHECK_CACHE(){2;}
 
 sub new {
   my ($class, $r) = @_;

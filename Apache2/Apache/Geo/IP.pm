@@ -1,54 +1,58 @@
 package Apache::Geo::IP;
 
-use Apache::GeoIP;
 use strict;
-use Apache;
-use Apache::Constants qw(REMOTE_HOST);
+use Apache::RequestRec;
+use Apache::Const -compile => qw(REMOTE_HOST);
 use vars qw($VERSION $gip);
 
-my $GEOIP_DBFILE = "%SUB%";
+use Apache::GeoIP;
 
-@Apache::Geo::IP::ISA = qw(Apache);
+@Apache::Geo::IP::ISA = qw(Apache::RequestRec);
 
-$VERSION = '0.26';
+$VERSION = '1.12';
 
+my $GEOIP_DBFILE;
 sub GEOIP_STANDARD(){0;}
 sub GEOIP_MEMORY_CACHE(){1;}
 
 sub new {
   my ($class, $r) = @_;
-  $r ||= Apache->request;
- 
-  init($r) unless ($gip);
 
-  return bless { r => $r }, $class;
+  init($r) unless $gip;
+
+  return bless { r => $r}, $class;
 }
 
 sub init {
-  my $r = shift || Apache->request;
-  my $file = $r->dir_config('GeoIPDBFile');
+  my $r = shift;
+  my $file = $r->dir_config->get('GeoIPDBFile') || $GEOIP_DBFILE;
   if ($file) {
-    unless (-e $file) {
-	$r->warn("Cannot find GeoIP database file '$file'");
-	die;
-      }
+    unless ( -e $file) {
+      $r->log->error("Cannot find GeoIP database file '$file'");
+      die;
+    }
   }
   else {
-    $file = $GEOIP_DBFILE;
+    $r->log->error("Must specify GeoIP database file");
+    die;
   }
-  
-  my $flag = $r->dir_config('GeoIPFlag');
+
+  my $flag = $r->dir_config->get('GeoIPFlag');
   if ($flag) {
     unless ($flag =~ /^(STANDARD|MEMORY_CACHE)$/i) {
-      $r->warn("GeoIP flag '$flag' not understood");
+      $r->log->error("GeoIP flag '$flag' not understood");
       die;
     }
     $flag = 'GEOIP_' . uc($flag);
   }
-    else {
-      $flag = 'GEOIP_STANDARD';
-    }
-  $gip = Apache::GeoIP->open($file, $flag);
+  else {
+    $flag = 'GEOIP_STANDARD';
+  }
+
+  unless ($gip = Apache::GeoIP->open($file, $flag)) {
+    $r->log->error("Couldn't make GeoIP object");
+    die;
+  }
 }
 
 sub country_code_by_addr {
@@ -59,7 +63,7 @@ sub country_code_by_addr {
 
 sub country_code_by_name {
   my $self = shift;
-  my $host = shift || $self->get_remote_host(REMOTE_HOST);
+  my $host = shift || $self->get_remote_host(Apache::REMOTE_HOST);
   return $gip->_country_code_by_name($host);
 }
 
@@ -71,7 +75,7 @@ sub country_code3_by_addr {
 
 sub country_code3_by_name {
   my $self = shift;
-  my $host = shift || $self->get_remote_host(REMOTE_HOST);
+  my $host = shift || $self->get_remote_host(Apache::REMOTE_HOST);
   return $gip->_country_code3_by_name($host);
 }
 
@@ -83,17 +87,18 @@ sub country_name_by_addr {
 
 sub country_name_by_name {
   my $self = shift;
-  my $host = shift || $self->get_remote_host(REMOTE_HOST);
+  my $host = shift || $self->get_remote_host(Apache::REMOTE_HOST);
   return $gip->_country_name_by_name($host);
 }
 
 
 1;
+
 __END__
 
 =head1 NAME
 
-Apache::Geo::IP - Look up country by IP Address
+Apache::Geo::IP - Look up country by IP address
 
 =head1 SYNOPSIS
 
@@ -101,8 +106,8 @@ Apache::Geo::IP - Look up country by IP Address
  # PerlModule Apache::HelloIP
  #<Location /ip>
  #   SetHandler perl-script
- #   PerlHandler Apache::HelloIP
- #   PerlSetVar GeoIPDBFile "/usr/local/share/geoip/GeoIP.dat"
+ #   PerlResponseHandler Apache::HelloIP
+ #   PerlSetVar GeoIPDBFile "/usr/local/share/GeoIP/GeoIP.dat"
  #   PerlSetVar GeoIPFlag Standard
  #</Location>
  
@@ -111,22 +116,22 @@ Apache::Geo::IP - Look up country by IP Address
  use Apache::Geo::IP;
  use strict;
  
- use Apache::Constants qw(OK);
+ use Apache::Const -compile => 'OK';
  
  sub handler {
    my $r = Apache::Geo::IP->new(shift);
    $r->content_type('text/plain');
    my $country = uc($r->country_code_by_addr());
- 
+  
    $r->print($country);
   
-   return OK;
+   return Apache::OK;
  }
  1;
-
+ 
 =head1 DESCRIPTION
 
-This module constitutes a mod_perl (version 1) interface to the 
+This module constitutes a mod_perl (version 2) interface to the 
 I<Geo::IP> module, which looks up in a database a country of origin of
 an IP address. This database simply contains
 IP blocks as keys, and countries as values. This database should be more
@@ -143,14 +148,14 @@ assigned to.
 
 =head1 CONFIGURATION
 
-This module subclasses I<Apache>, and can be used as follows
-in an Apache module.
+This module subclasses I<Apache::RequestRec>, and can be used 
+as follows in an Apache module.
  
   # file Apache::HelloIP
   
   use Apache::Geo::IP;
   use strict;
-  
+ 
   sub handler {
      my $r = Apache::Geo::IP->new(shift);
      # continue along
@@ -158,9 +163,8 @@ in an Apache module.
  
 The directives in F<httpd.conf> are as follows:
  
-  PerlModule Apache::HelloIP
   <Location /ip>
-    PerlSetVar GeoIPDBFile "/usr/local/share/geoip/GeoIP.dat"
+    PerlSetVar GeoIPDBFile "/usr/local/share/GeoIP/GeoIP.dat"
     PerlSetVar GeoIPFlag Standard
     # other directives
   </Location>
@@ -199,7 +203,7 @@ C<$r-E<gt>connection-E<gt>remote_ip> is used.
 
 Returns the ISO 3166 country code for a hostname.
 If I<$ipname> is not given, the value obtained by
-C<$r-E<gt>get_remote_host(REMOTE_HOST)> is used.
+C<$r-E<gt>get_remote_host(Apache::REMOTE_HOST)> is used.
 
 =item $code = $r->country_code3_by_addr( [$ipaddr] );
 
@@ -211,7 +215,7 @@ C<$r-E<gt>connection-E<gt>remote_ip> is used.
 
 Returns the 3 letter country code for a hostname.
 If I<$ipname> is not given, the value obtained by
-C<$r-E<gt>get_remote_host(REMOTE_HOST)> is used.
+C<$r-E<gt>get_remote_host(Apache::REMOTE_HOST)> is used.
 
 =item $name = $r->country_name_by_addr( [$ipaddr] );
 
@@ -223,17 +227,17 @@ C<$r-E<gt>connection-E<gt>remote_ip> is used.
 
 Returns the full country name for a hostname.
 If I<$ipname> is not given, the value obtained by
-C<$r-E<gt>get_remote_host(REMOTE_HOST)> is used.
+C<$r-E<gt>get_remote_host(Apache::REMOTE_HOST)> is used.
 
 =back
 
 =head1 VERSION
 
-0.26
+1.11
 
 =head1 SEE ALSO
 
-L<Geo::IP> and L<Apache>.
+L<Geo::IP> and L<Apache::RequestRec>.
 
 =head1 AUTHOR
 

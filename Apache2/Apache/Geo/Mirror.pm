@@ -12,7 +12,7 @@ use APR::URI;
 use Apache::Const -compile => qw(REMOTE_HOST REDIRECT);
 use Apache::GeoIP;
 
-my $GEOIP_DBFILE = "%SUB%";
+my $GEOIP_DBFILE;
 
 @Apache::Geo::Mirror::ISA = qw(Apache::RequestRec);
 
@@ -35,17 +35,18 @@ sub new {
 
 sub init {
   my $r = shift;
-  my $file = $r->dir_config->get('GeoIPDBFile');
-  if ($file) {
-    unless (-e $file) {
+  my $file = $r->dir_config->get('GeoIPDBFile') || $GEOIP_DBFILE;
+  if ($file)  {
+    unless ( -e $file) {
       $r->log->error("Cannot find GeoIP database file '$file'");
       die;
     }
   }
   else {
-    $file = $GEOIP_DBFILE;
+    $r->log->error("Must specify GeoIP database file");
+    die;
   }
-  
+
   my $flag = $r->dir_config->get('GeoIPFlag');
     if ($flag) {
       unless ($flag =~ /^(STANDARD|MEMORY_CACHE)$/i) {
@@ -57,8 +58,12 @@ sub init {
   else {
     $flag = 'GEOIP_STANDARD';
   }
-  $gip = Apache::GeoIP->open($file, $flag);
-
+  
+  unless ($gip = Apache::GeoIP->open($file, $flag)) {
+    $r->log->error("Couldn't make GeoIP object");
+    die;
+  }
+  
   my $mirror_file = $r->dir_config->get('GeoIPMirror');
   if ($mirror_file and -f $mirror_file) {
     open (MIRROR, $mirror_file) or die "Cannot open $mirror_file: $!";
@@ -432,7 +437,7 @@ Apache::Geo::Mirror - Find closest Mirror
  #<Location /mirror>
  #   SetHandler perl-script
  #   PerlHandler Apache::HelloMirror
- #   PerlSetVar GeoIPDBFile "/usr/local/share/geoip/GeoIP.dat"
+ #   PerlSetVar GeoIPDBFile "/usr/local/share/GeoIP/GeoIP.dat"
  #   PerlSetVar GeoIPFlag Standard
  #   PerlSetVar GeoIPMirror "/usr/local/share/data/mirror.txt"
  #   PerlSetVar GeoIPDefault it
@@ -458,7 +463,7 @@ Apache::Geo::Mirror - Find closest Mirror
 
 =head1 DESCRIPTION
 
-This module provides a mod_perl (version 1) interface to the
+This module provides a mod_perl (version 2) interface to the
 I<Geo::Mirror> module, which
 finds the closest mirror for an IP address.  It uses I<Geo::IP>
 to identify the country that the IP address originated from.  If
@@ -467,7 +472,7 @@ closest country using a latitude/longitude table.
 
 =head1 CONFIGURATION
 
-This module subclasses I<Apache>, and can be used as follows
+This module subclasses I<Apache::RequestRec>, and can be used as follows
 in an Apache module.
  
   # file Apache::HelloMirror

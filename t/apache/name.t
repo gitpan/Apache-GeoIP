@@ -5,7 +5,7 @@ use Apache::Test;
 use Apache::TestUtil;
 use Apache::TestRequest 'GET_BODY';
 
-plan tests => 21; # plan one test.
+plan tests => 20; # plan one test.
 
 Apache::TestRequest::module('default');
 
@@ -42,7 +42,6 @@ __DATA__
 yahoo.com	US
 www.bundesregierung.de	DE
 www.thaigov.go.th	TH
-www.president.ir	IR
 www.gov.ru	RU
 www.parliament.ge	GE
 www.cpv.org.vn	VN

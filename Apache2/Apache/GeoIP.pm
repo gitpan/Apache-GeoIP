@@ -6,7 +6,7 @@ require DynaLoader;
 
 @Apache::GeoIP::ISA = qw(DynaLoader);
 
-$VERSION = '0.26';
+$VERSION = '1.11';
 
 __PACKAGE__->bootstrap($VERSION);
 
@@ -17,6 +17,24 @@ __END__
 =head1 NAME
 
 Apache::GeoIP - Look up country by IP Address
+
+=head1 IP ADDRESS TO COUNTRY DATABASES
+
+Free monthly updates to the database are available from 
+
+  http://www.maxmind.com/download/geoip/database/
+
+This free database is similar to the database contained in IP::Country, as 
+well as many paid databases. It uses ARIN, RIPE, APNIC, and LACNIC whois to 
+obtain the IP->Country mappings.
+
+If you require greater accuracy, MaxMind offers a Premium database on a paid 
+subscription basis. 
+
+=head1 MAILING LISTS AND CVS
+
+A mailing list and cvs access for the GeoIP library are available 
+from SourceForge; see http://sourceforge.net/projects/geoip/.
 
 =head1 SEE ALSO
 

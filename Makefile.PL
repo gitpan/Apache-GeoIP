@@ -10,8 +10,9 @@ require 5.006001;
 
 use constant WIN32 => ($^O =~ /Win32/i);
 
-my (%config, $ans, $GEOIP_DBFILE, @src_files);
+my (%config, $ans, $GEOIP_DBFILE, $GEOIP_DBCITYFILE, @src_files);
 my $db_file = 'GeoIP.dat';
+my $city_file = 'GeoIPCity.dat';
 my $db_dir = WIN32 ? '/WINDOWS/System32' : '/usr/local/share/GeoIP';
 
 if (-d $db_dir) {
@@ -21,7 +22,7 @@ if (-d $db_dir) {
       $GEOIP_DBFILE = $db_dir . '/' . $db_file;
     }
     else {
-      die "Please choose a different directory";
+      place_db();
     }
   }
   else {
@@ -30,7 +31,37 @@ if (-d $db_dir) {
   }
 }
 else {
+  place_db();
+}
+
+if (-d $db_dir) {
+  if (-e "$db_dir/$city_file") {
+    $ans = prompt("Should I use the GeoIPCity.dat under $db_dir?", 'yes');
+    if ($ans =~ /^y/i) {
+      $GEOIP_DBCITYFILE = $db_dir . '/' . $city_file;
+    }
+  }
+}
+
+unless ($GEOIP_DBCITYFILE) {
+  $ans = prompt("Do you have the GeoIPCity.dat database?", 'no');
+  if ($ans =~ /^y/i) {
+    my $dir = prompt("In which directory is it located?", $db_dir);
+    $dir =~ s!\\!/!g;
+    $dir =~ s!/$!!;
+    if (-e "$dir/$city_file") {
+      $GEOIP_DBCITYFILE = $dir . '/' . $city_file;
+    }
+    else {
+      warn("Cannot find $city_file under $dir -- ignoring ...");
+    }
+  }
+}
+
+sub place_db {
   my $wanted = prompt('Where should I install GeoIP.dat?', $db_dir);
+  $wanted =~ s!\\!/!g;
+  $wanted =~ s!/$!!;
   if (-d $wanted) {
     $db_dir = $wanted;
     if (-e "$wanted/$db_file") {
@@ -61,30 +92,51 @@ else {
     }
   }
 }
+
+
+my $objs = 'libGeoIP.o libGeoIPCity.o GeoIP.o';
+$objs .= ' snprintf.o' if WIN32;
+
 my $cwd = cwd;
 my $var = qq{\n\nPerlSetVar GeoIPMirror "$cwd/t/conf/cpan_mirror.txt"};
-my $to_edit = { 'Mirror.pm' => {'%SUB%' => $GEOIP_DBFILE},
-		'IP.pm' => {'%SUB%' => $GEOIP_DBFILE},
+my $to_edit = { 'Mirror.pm' => 
+		{'my $GEOIP_DBFILE;' => 
+		 qq{my \$GEOIP_DBFILE = "$GEOIP_DBFILE";}},
+		'IP.pm' => {'my $GEOIP_DBFILE;' => 
+		 qq{my \$GEOIP_DBFILE = "$GEOIP_DBFILE";}},
 		'mirror.pm' => {'__END__' => "__END__$var"},
 		'extra.conf.in' => {'PERL5LIB' => "PERL5LIB $cwd/blib/lib"},
 	      };
 
-my ($libdir, $files_to_clean) = mp_copy('tmp', $to_edit);
+if (my $GEOIP_DBCITYFILE) {
+  $to_edit->{'Record.pm'}->{'my $GEOIP_DBCITYFILE;'} =
+    qq{my \$GEOIP_DBCITYFILE = "$GEOIP_DBCITYFILE";};
+}
+
+my ($libdir, $files_to_clean) = mp_copy($to_edit);
+my $mpv = ($libdir eq 'Apache') ? 1.26 : 1.99;
 push @$files_to_clean, 't/TEST';
 
 $config{LIBS} = WIN32 ? ' -lzlib' : ' -lz';
-$config{DEFINE} = qq{ -DDATADIR=\\"$db_dir\\"} unless (WIN32);
+
+my $datadir = $db_dir;
+if (WIN32) {
+  $datadir =~ s!/!\\!g;
+  $datadir =~ s!\\!\\\\!g;
+}
+
+$config{DEFINE} = qq{ -DGEOIPDATADIR=\\"$datadir\\"};
 
 WriteMakefile(
 	      NAME           => 'Apache::GeoIP',
-	      VERSION_FROM   => 'tmp/Apache/GeoIP.pm',
-	      PREREQ_PM      => { mod_perl => 1.26 },
+	      VERSION_FROM   => "$libdir/GeoIP.pm",
+              PREREQ_PM      => { mod_perl => $mpv },
 	      ($] >= 5.005 ?   
-	       (ABSTRACT_FROM => 'tmp/Apache/GeoIP.pm',
+	       (ABSTRACT_FROM => "$libdir/GeoIP.pm",
 		AUTHOR     => 'Randy Kobes <randy@theoryx5.uwinnipeg.ca>') 
 	       : ()),
 	      clean          => { FILES => "@$files_to_clean"},
-	      OBJECT         => 'libGeoIP.o GeoIP.o',
+              OBJECT         => $objs,
 	      dist           => {
 				 SUFFIX   => 'gz',
 				 COMPRESS => 'gzip -9f',
@@ -112,8 +164,7 @@ EOF
 }
 
 #######################################################################
-# The following routine takes a first argument a directory
-# name, underneath with are two subdirectories:
+# The following routine assumes the existence of two subdirectories:
 #   Apache: for mod_perl-1 things
 #   Apache2/Apache: for mod_perl-2 things
 # which_modperl() is called to determine which of the two
@@ -124,7 +175,7 @@ EOF
 # under either Apache or Apache2/Apache, the files under
 # this directory are copied beneath the top-level t/.
 # 
-# An optional second argument may be specified which is a
+# An optional argument may be specified which is a
 # hash reference containing a list of files that require
 # editing before being copied. The form of this is
 #
@@ -136,16 +187,20 @@ EOF
 # Simple filenames alone may be specified, except when
 # an ambiguity exists, in which case a full path (relative
 # to the top-level directory) should be given.
+#
+# The routine returns a list containing two items - which
+# of the directories (Apache or Apache2) is used, and also
+# an array reference of files copied to the lib/ or t/ directories
+#
 ########################################################################
 
 sub mp_copy {
-  my $src_dir = shift || die "Please specify directory for mp_copy()";
   my $to_edit = shift;
   
   my $apache_dir = which_modperl();
   @src_files = ();
   my @dest_files = ();
-  finddepth(\&wanted, "$src_dir/$apache_dir");
+  finddepth(\&wanted, $apache_dir);
 
   foreach my $src (@src_files) {
     my $dir = dirname($src);
@@ -154,7 +209,7 @@ sub mp_copy {
       $dest_dir = "t/$1";
     }
     else {
-      ($dest_dir = $dir) =~ s!^$src_dir/!lib/!;
+      $dest_dir = 'lib/' . $dir;
     }
     unless (-d $dest_dir) {
       mkpath($dest_dir, 1, 0755) or die "mkpath $dest_dir failed: $!";
@@ -162,15 +217,14 @@ sub mp_copy {
     my $base = basename($src);
     my $dest_file = $dest_dir . '/' . $base;
     push @dest_files, $dest_file;
-
-    (my $key = $src) =~ s!^$src_dir/!!;
+    my $key = $src;
     if ( $to_edit and ($to_edit->{$key} or $to_edit->{$base})) {
       my $subs = $to_edit->{$key} || $to_edit->{$base};
       open(OLD, $src) or die "Cannot open $src: $!";
       open(NEW, ">$dest_file") or die "Cannot open $dest_file: $!";
       while (<OLD>) {
 	foreach my $pattern (keys %{$subs}) {
-	  s/$pattern/$subs->{$pattern}/g;
+	  s/\Q$pattern\E/$subs->{$pattern}/g;
 	}
 	print NEW $_;
       }

@@ -1,7 +1,7 @@
 /* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 2; tab-width: 2 -*- */
 /* GeoIP.c
  *
- * Copyright (C) 2002 MaxMind.com
+ * Copyright (C) 2002 MaxMind.com.  All Rights Reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public
@@ -37,10 +37,6 @@ const int STATE_BEGIN   = 16700000;
 const int STRUCTURE_INFO_MAX_SIZE = 20;
 const int DATABASE_INFO_MAX_SIZE = 100;
 
-const int COUNTRY_EDITION = 106;
-const int REGION_EDITION  = 112;
-const int CITY_EDITION    = 111;
-
 #define CHECK_ERR(err, msg) { \
 		if (err != Z_OK) { \
 				fprintf(stderr, "%s error: %d\n", msg, err); \
@@ -57,9 +53,12 @@ const char * GeoIP_country_name[247] = {"N/A","Asia/Pacific Region","Europe","An
 "Anonymous Proxy","Satellite Provider","Other"};
 
 #ifndef WIN32
-const char *GeoIPDBFileName = DATADIR "/GeoIP.dat";
+const char *GeoIPDBFileName = GEOIPDATADIR "/GeoIP.dat";
 #else
 const char *GeoIPDBFileName = "GeoIP.dat";
+#ifndef GEOIPDATADIR
+#define GEOIPDATADIR "%SystemRoot%\\SYSTEM32"
+#endif
 #endif
 
 int _check_mtime(GeoIP *gi) {
@@ -88,17 +87,17 @@ void _setup_segments(GeoIP * gi) {
 	unsigned char buf[RECORD_LENGTH];
 
 	/* default to GeoIP Country Edition */
-	gi->databaseType = COUNTRY_EDITION;
+	gi->databaseType = GEOIP_COUNTRY_EDITION;
 	fseek(gi->GeoIPDatabase, -3l, SEEK_END);
 	for (i = 0; i < STRUCTURE_INFO_MAX_SIZE; i++) {
 		fread(delim, 1, 3, gi->GeoIPDatabase);
 		if (delim[0] == 255 && delim[1] == 255 && delim[2] == 255) {
 			fread(&gi->databaseType, 1, 1, gi->GeoIPDatabase);
-			if (gi->databaseType == REGION_EDITION) {
-				/* State Edition */
+			if (gi->databaseType == GEOIP_REGION_EDITION) {
+				/* Region Edition */
 				gi->databaseSegments = malloc(sizeof(int));
 				gi->databaseSegments[0] = STATE_BEGIN;
-			} else if (gi->databaseType == CITY_EDITION) {
+			} else if (gi->databaseType == GEOIP_CITY_EDITION) {
 				/* City Edition has two segments, read offset of second segment */
 				gi->databaseSegments = malloc(sizeof(int));
 				gi->databaseSegments[0] = 0;
@@ -112,7 +111,7 @@ void _setup_segments(GeoIP * gi) {
 			fseek(gi->GeoIPDatabase, -4l, SEEK_CUR);
 		}
 	}
-	if (gi->databaseType == COUNTRY_EDITION) {
+	if (gi->databaseType == GEOIP_COUNTRY_EDITION) {
 		gi->databaseSegments = malloc(sizeof(int));
 		gi->databaseSegments[0] = COUNTRY_BEGIN;
 	}
@@ -252,7 +251,7 @@ char * _dat_path_in_regkey () {
 	if (RegCreateKeyEx(HKEY_LOCAL_MACHINE, "SOFTWARE\\MaxMind\\GeoIP", 0, NULL, 0, KEY_ALL_ACCESS, NULL, &hkGeoIP, &lpdwDisposition) != ERROR_SUCCESS)
 		return NULL;
 	if (RegQueryValueEx(hkGeoIP, "DATADIR", 0, &type, buf, &size) != ERROR_SUCCESS)
-		strcpy(buf, "%SystemRoot%\\SYSTEM32");
+		strcpy(buf, GEOIPDATADIR);
 	if (RegSetValueEx(hkGeoIP, "DATADIR", 0, REG_EXPAND_SZ, buf, strlen(buf)) != ERROR_SUCCESS)
 		return NULL;
 	ExpandEnvironmentStrings(buf, filename, MAX_PATH);
@@ -297,7 +296,6 @@ int wsastartup(void) {
 
 #endif	/* WIN32 */
 
-
 GeoIP* GeoIP_new (int flags) {
 	GeoIP * gi;
 #ifdef WIN32
@@ -311,13 +309,13 @@ GeoIP* GeoIP_new (int flags) {
 		fprintf(stderr,"Unable to query registry for database location\n");
 		return NULL;
 	}
-#endif	/* WIN32 */
+	gi = GeoIP_open(filename, flags);
+	free(filename);
 
+#else
 	gi = GeoIP_open (GeoIPDBFileName, flags);
 
-#ifdef WIN32
-	free(filename);
-#endif
+#endif	/* WIN32 */
 
 	return gi;
 }
@@ -362,7 +360,7 @@ GeoIP* GeoIP_open (const char * filename, int flags) {
 		_setup_segments(gi);
 
 #ifdef WIN32
-	if (wsastartup() == 0) return NULL;
+		if (wsastartup() == 0) return NULL;
 #endif
 
 		return gi;
@@ -418,6 +416,7 @@ int GeoIP_country_id_by_name (GeoIP* gi, const char *name) {
 			return 0;
 		}
 		ipnum = _h_addr_to_num((unsigned char *) host->h_addr_list[0]);
+		if (ipnum == 0) return 0;
 	}
 	ret = _seek_country(gi, ipnum) - COUNTRY_BEGIN;
 	return ret;
@@ -498,7 +497,7 @@ char *GeoIP_database_info (GeoIP* gi) {
 	return NULL;
 }
 
-/* GeoIP State Edition functions */
+/* GeoIP Region Edition functions */
 GeoIPRegion * _get_region(GeoIP* gi, unsigned long ipnum) {
 	GeoIPRegion * region;
 	int seek_region;
@@ -545,12 +544,17 @@ GeoIPRegion * GeoIP_region_by_name (GeoIP* gi, const char *name) {
 			return 0;
 		}
 		ipnum = _h_addr_to_num((unsigned char *) host->h_addr_list[0]);
+		if (ipnum == 0) return 0;
 	}
 	return _get_region(gi, ipnum);
 }
 
 void GeoIPRegion_delete (GeoIPRegion *gir) {
-	if (strlen(gir->region) > 0)
+	if (gir->region != NULL)
 			free(gir->region);
 	free(gir);
+}
+
+unsigned char GeoIP_database_edition (GeoIP* gi) {
+	return gi->databaseType;
 }

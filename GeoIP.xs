@@ -7,12 +7,13 @@ extern "C" {
 #include "XSUB.h"
 
 #include "libGeoIP.h"
+#include "libGeoIPCity.h"
 
 #ifdef __cplusplus
 }
 #endif
 
-MODULE = Apache::GeoIP       PACKAGE = Apache::GeoIP
+MODULE = Apache::GeoIP	PACKAGE = Apache::GeoIP
 
 PROTOTYPES: DISABLE
 
@@ -89,8 +90,102 @@ _country_name_by_name(gi, name)
     OUTPUT:
 	RETVAL
 
+GeoIPRecord *
+_record_by_addr(gi, addr)
+	GeoIP *gi
+	char * addr
+    PREINIT:
+	char * CLASS = "Apache::GeoIP::Record";
+    CODE:
+	RETVAL = GeoIP_record_by_addr(gi,addr);
+    OUTPUT:
+	RETVAL
+
+GeoIPRecord *
+_record_by_name(gi, addr)
+	GeoIP *gi
+	char * addr
+    PREINIT:
+	char * CLASS = "Apache::GeoIP::Record";
+    CODE:
+	RETVAL = GeoIP_record_by_name(gi,addr);
+    OUTPUT:
+	RETVAL
+
 void
 DESTROY(gi)
 	GeoIP *gi
     CODE:
 	GeoIP_delete(gi);
+
+MODULE = Apache::GeoIP        PACKAGE = Apache::GeoIP::Record
+
+char *
+_country_code(gir)
+	GeoIPRecord *gir
+    CODE:
+	RETVAL = gir->country_code;
+    OUTPUT:
+	RETVAL
+
+char *
+_country_code3(gir)
+	GeoIPRecord *gir
+    CODE:
+	RETVAL = gir->country_code3;
+    OUTPUT:
+	RETVAL
+
+char *
+_country_name(gir)
+	GeoIPRecord *gir
+    CODE:
+	RETVAL = gir->country_name;
+    OUTPUT:
+	RETVAL
+
+char *
+_region(gir)
+	GeoIPRecord *gir
+    CODE:
+	RETVAL = gir->region;
+    OUTPUT:
+	RETVAL
+
+char *
+_city(gir)
+	GeoIPRecord *gir
+    CODE:
+	RETVAL = gir->city;
+    OUTPUT:
+	RETVAL
+
+char *
+_postal_code(gir)
+	GeoIPRecord *gir
+    CODE:
+	RETVAL = gir->postal_code;
+    OUTPUT:
+	RETVAL
+
+float
+_latitude(gir)
+	GeoIPRecord *gir
+    CODE:
+	RETVAL = gir->latitude;
+    OUTPUT:
+	RETVAL
+
+float
+_longitude(gir)
+	GeoIPRecord *gir
+    CODE:
+	RETVAL = gir->longitude;
+    OUTPUT:
+	RETVAL
+
+void
+DESTROY(gir)
+	GeoIPRecord *gir
+    CODE:
+	GeoIPRecord_delete(gir);

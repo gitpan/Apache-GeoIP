@@ -1,6 +1,10 @@
 Revision history for Perl extension Apache::Geo::IP.
 
-0.26 Tue Oct 15 012:42:48 2002
+1.11 Wed Dec 12 11:42:48 2002
+
+  - update to sync with Geo::IP version 1.11, including City interface
+
+0.26 Tue Oct 15 12:42:48 2002
 
   - original version
 

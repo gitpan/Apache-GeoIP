@@ -7,7 +7,7 @@ use POSIX;
 
 $VERSION = '0.10';
 
-my $GEOIP_DBFILE = "%SUB%";
+my $GEOIP_DBFILE;
 
 use Apache;
 use Apache::Constants qw(REMOTE_HOST REDIRECT);
@@ -26,16 +26,15 @@ while (<DATA>) {
 
 sub new {
   my ($class, $r) = @_;
-  $r ||= Apache->request;
  
   init($r) unless ($gip and $mirror);
 
-   return bless { r => $r }, $class;
+  return bless { r => $r }, $class;
 }
 
 sub init {
-  my $r = shift || Apache->request;
-  my $file = $r->dir_config('GeoIPDBFile');
+  my $r = shift;
+  my $file = $r->dir_config('GeoIPDBFile') || $GEOIP_DBFILE;
   if ($file) {
     unless (-e $file) {
       $r->warn("Cannot find GeoIP database file '$file'");
@@ -43,9 +42,10 @@ sub init {
     }
   }
   else {
-    $file = $GEOIP_DBFILE;
+    $r->warn("Must specify GeoIP database file");
+    die;
   }
-  
+
   my $flag = $r->dir_config('GeoIPFlag');
     if ($flag) {
       unless ($flag =~ /^(STANDARD|MEMORY_CACHE)$/i) {
@@ -57,7 +57,11 @@ sub init {
   else {
     $flag = 'GEOIP_STANDARD';
   }
-  $gip = Apache::GeoIP->open($file, $flag);
+
+  unless ($gip = Apache::GeoIP->open($file, $flag)) {
+    $r->warn("Couldn't make GeoIP object");
+    die;
+  }
 
   my $mirror_file = $r->dir_config('GeoIPMirror');
   if ($mirror_file and -f $mirror_file) {
@@ -478,7 +482,7 @@ in an Apache module.
 The directives in F<httpd.conf> are as follows:
  
   <Location /mirror>
-    PerlSetVar GeoIPDBFile "/usr/local/share/geoip/GeoIP.dat"
+    PerlSetVar GeoIPDBFile "/usr/local/share/GeoIP/GeoIP.dat"
     PerlSetVar GeoIPFlag Standard
     PerlSetVar GeoIPMirror "/usr/local/share/data/mirror.txt"
     PerlSetVar GeoIPDefault us

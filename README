@@ -40,6 +40,25 @@ DESCRIPTION
     These tests need a network connection to run; some may fail
     due to timeouts upon doing certain name lookups.
 
+PPM PACKAGE
+    A Win32 ppm package, suitable for use with ActivePerl
+    compatible Perl packages, is available at
+        http://theoryx5.uwinnipeg.ca/ppmpackages/
+    for ActivePerl 6xx and at
+        http://theoryx5.uwinnipeg.ca/ppms/
+    for ActivePerl 8xx. To install, within the ppm shell set the 
+    repository to
+        http://theoryx5.uwinnipeg.ca/cgi-bin/ppmserver?urn:/PPMServer
+    for ActivePerl 6xx and to
+        http://theoryx5.uwinnipeg.ca/cgi-bin/ppmserver?urn:/PPMServer58
+    for ActivePerl 8xx, and then
+        ppm> install Apache-GeoIP
+    If a post-install script is not run asking you where to install
+    the database file GeoIP.dat, you can grab the corresponding
+    .tar.gz file under the appropriate x86/ directory and extract
+    the data file from it.
+
+
 AUTHOR
 
     The look-up code for associating a country with an IP address 
@@ -50,4 +69,3 @@ AUTHOR
 
    All rights reserved.  This package is free software; you can redistribute 
    it and/or modify it under the same terms as Perl itself.
-

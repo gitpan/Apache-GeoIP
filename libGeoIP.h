@@ -54,6 +54,12 @@ typedef enum {
 	GEOIP_CHECK_CACHE = 2,
 } GeoIPOptions;
 
+typedef enum {
+	GEOIP_COUNTRY_EDITION = 106,
+	GEOIP_REGION_EDITION  = 112,
+	GEOIP_CITY_EDITION    = 111,
+} GeoIPDBTypes;
+
 extern const char *GeoIPDBFileName;
 
 extern const char GeoIP_country_code[247][3];
@@ -77,6 +83,7 @@ GeoIPRegion * GeoIP_region_by_name (GeoIP* gi, const char *host);
 void GeoIPRegion_delete (GeoIPRegion *gir);
 
 char *GeoIP_database_info (GeoIP* gi);
+unsigned char GeoIP_database_edition (GeoIP* gi);
 
 int _seek_country (GeoIP *gi, unsigned long ipnum);
 unsigned long _addr_to_num (const char *addr);

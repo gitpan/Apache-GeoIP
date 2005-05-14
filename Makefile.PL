@@ -1,4 +1,5 @@
 use strict;
+use warnings;
 use ExtUtils::MakeMaker;
 use Config;
 use Cwd;
@@ -12,6 +13,10 @@ use constant WIN32 => ($^O =~ /Win32/i);
 require Win32 if WIN32;
 
 my $min_at_version = 1.13;
+my $min_mp2_version = 1.999022;
+my $min_mp1_version = 1.26;
+
+my @INC_ORIG = @INC;
 
 my (%config, $ans, $GEOIP_DBFILE, $GEOIP_DBCITYFILE, @src_files);
 my $db_file = 'GeoIP.dat';
@@ -73,8 +78,6 @@ sub place_db {
   }
 }
 
-my $objs = 'libGeoIP.o libGeoIPCity.o GeoIP.o';
-
 if (WIN32) {
   $GEOIP_DBFILE = Win32::GetShortPathName($GEOIP_DBFILE);
 }
@@ -85,9 +88,9 @@ my $to_edit = { 'Mirror.pm' =>
 		'IP.pm' => {'my $GEOIP_DBFILE;' => 
 			    qq{my \$GEOIP_DBFILE = "$GEOIP_DBFILE";}},
 	      };
-
+my $prereq = {};
 my ($libdir, $files_to_clean) = mp_copy($to_edit);
-my $mpv = ($libdir eq 'Apache') ? 1.26 : 1.99;
+my $mpv = ($libdir eq 'Apache') ? $min_mp1_version : $min_mp2_version;
 push @$files_to_clean, 't/TEST';
 
 $config{LIBS} = WIN32 ? ' -lzlib' : ' -lz';
@@ -97,17 +100,16 @@ my $have_stdint_h;
 my @inc = ($Config{usrinc});
 push @inc, split ' ', $Config{locincpth};
 for (@inc) {
-    if (-e "$_/stdint.h") {
-        $have_stdint_h = 1;
-        last;
-    }
+  if (-e "$_/stdint.h") {
+    $have_stdint_h = 1;
+    last;
+  }
 }
 $config{DEFINE} .= ' -DHAVE_STDINT_H' if $have_stdint_h;
 
-my $prereq = {mod_perl => $mpv};
 eval {require Apache::Test;};
 if ($@) {
-    print <<'WARN';
+  print <<'WARN';
 
 Apparently you are missing Apache::Test, which is needed
 to run the test suite. I can add this to the list of
@@ -115,25 +117,34 @@ prerequisites, if you like.
 
 WARN
 
-    my $ans = prompt('Add Apache::Test to prerequisites?', 'yes');
-    if ($ans =~ /^y/i) {
-        $prereq->{'Apache::Test'} = $min_at_version;
-    }
-    else {
-        print "The test suite will be disabled\n";
-    }
+  my $ans = prompt('Add Apache::Test to prerequisites?', 'yes');
+  if ($ans =~ /^y/i) {
+    $prereq->{'Apache::Test'} = $min_at_version;
+  }
+  else {
+    print "The test suite will be disabled\n";
+  }
 }
 
+my $name = ($libdir eq 'Apache') ? 'Apache::GeoIP' : 'Apache2::GeoIP';
+my $objs = join ' ', ( qw(libGeoIP.o libGeoIPCity.o),
+                       ($libdir eq 'Apache2' ? 
+                        'Apache2_GeoIP.o' : 'Apache_GeoIP.o') );
+my $eu_version = $ExtUtils::MakeMaker::VERSION;
 my %opts = (
-	      NAME           => 'Apache::GeoIP',
+              NAME           => $name,
+              DISTNAME       => 'Apache-GeoIP',
 	      VERSION_FROM   => "$libdir/GeoIP.pm",
               PREREQ_PM      => $prereq,
-	      ($] >= 5.005 ?   
-	       (ABSTRACT_FROM => "$libdir/GeoIP.pm",
-		AUTHOR     => 'Randy Kobes <randy@theoryx5.uwinnipeg.ca>') 
+	      ($] >= 5.005 ?    
+               (ABSTRACT   => 'Look up country by IP address',
+                AUTHOR     => 'Randy Kobes <r.kobes@uwinnipeg.ca>') 
 	       : ()),
 	      clean          => { FILES => "@$files_to_clean"},
               OBJECT         => $objs,
+              ($eu_version >= 6.11 ?
+                (NO_META     => 1,)
+                : ()),
 	      dist           => {
 				 SUFFIX   => 'gz',
 				 COMPRESS => 'gzip -9f',
@@ -141,12 +152,14 @@ my %opts = (
 	      %config,
            );
 
-if ($mpv < 1.99) {
-    WriteMakefile(%opts);
+@INC = @INC_ORIG;
+
+eval {require ModPerl::MM;};
+if ($@) {
+  WriteMakefile(%opts);
 }
 else {
-    require ModPerl::MM;
-    ModPerl::MM::WriteMakefile(%opts);
+  ModPerl::MM::WriteMakefile(%opts);
 }
 
 # use Apache::Test to test things, but if not available,
@@ -164,7 +177,7 @@ sub MY::test {
 test::
 	@echo This test suite requires Apache::Test,
 	@echo available from the mod_perl 2 sources
-	@echo or from the httpd-test distribution.
+	@echo or from CPAN.
 EOF
 
 }
@@ -172,13 +185,13 @@ EOF
 #######################################################################
 # The following routine assumes the existence of two subdirectories:
 #   Apache: for mod_perl-1 things
-#   Apache2/Apache: for mod_perl-2 things
+#   Apache2: for mod_perl-2 things
 # which_modperl() is called to determine which of the two
 # directories to use, depending on availability of
 # mod_perl and/or user input. The files under the
 # chosen directory are then copied under the lib/ directory
 # for subsequent installation. If there is a t/ directory
-# under either Apache or Apache2/Apache, the files under
+# under either Apache/ or Apache2/, the files under
 # this directory are copied beneath the top-level t/.
 # 
 # An optional argument may be specified which is a
@@ -202,8 +215,9 @@ EOF
 
 sub mp_copy {
   my $to_edit = shift;
-  
+  my $ans;
   my $apache_dir = which_modperl();
+
   @src_files = ();
   my @dest_files = ();
   finddepth(\&wanted, $apache_dir);
@@ -250,37 +264,56 @@ sub wanted {
 }
 
 sub which_modperl {
-  my ($mp1, $mp2);
-  eval {require Apache2;};
-  $mp2 = 1 unless $@;
-  eval {require Apache::src;};
-  $mp1 = 1 unless $@;
-  
-  die "Please install either mod_perl (version 1 or 2)"
-    unless ($mp1 or $mp2);
   my $ans;
-  if ($mp2) {
+  eval {require mod_perl2;};
+  unless ($@) {
     $ans = prompt('Install mod_perl-2 version?', 'yes');
-    if ($ans =~ /^y/i) {
-      return 'Apache2/Apache';
-    }
-    else {
-      if ($mp1) {
-	$ans = prompt('Install mod_perl-1 version?', 'yes');
-	if ($ans =~ /^y/i) {
-	  return 'Apache';
-	}
-	else {
-	  die "Need to install one version or the other";
-	}
-      }
-      else {
-	die "Only mod_perl version 2 detected";
-      }
-    }
+    return 'Apache2' if ($ans =~ /^y/);
+  }
+  eval {require Apache::src;};
+  unless ($@) {
+    $ans = prompt('Install mod_perl-1 version?', 'yes');
+    return 'Apache' if ($ans =~ /^y/);
+  }
+
+  print <<"END";
+
+******************************************************************
+The required mod_perl installation was not detected.
+For mod_perl-2, the minimal version needed is $min_mp2_version,
+while for mod_perl-1, the minimal version is $min_mp1_version.
+I can add mod_perl to the list of prerequisites, if you like.
+******************************************************************
+
+END
+
+  eval {require Apache2;};
+  unless ($@) {
+    print <<"END";
+******************************************************************
+!!! WARNING !!!!!
+To use the mod_perl-2 version of this module, you must upgrade your
+existing mod_perl-2 installation to at least the RC5 CPAN version.
+See http://perl.apache.org/docs/2.0/rename.html for some very
+important information you need to know for upgrading.
+******************************************************************
+
+END
+
+  }
+  $ans = prompt("Add mod_perl-2 [v $min_mp2_version] to prerequisites?",
+                'yes');
+  if ($ans =~ /^y/) {
+    $prereq->{'Apache2::RequestRec'} = 0;
+    return 'Apache2';
   }
   else {
-    return 'Apache';
+    $ans = prompt("Add mod_perl-1 [v $min_mp1_version] to prerequisites?",
+                  'yes');
+    if ($ans =~ /^y/) {
+      $prereq->{'Apache::src'} = 0;
+      return 'Apache';
+    }
   }
-  
+  die "You need either mod_perl 1 or 2 for this module";
 }

@@ -40,6 +40,10 @@ DESCRIPTION
     These tests need a network connection to run; some may fail
     due to timeouts upon doing certain name lookups.
 
+    The mod_perl-2 modules included here, with prefix Apache2::*,
+    will only work with mod_perl-1.999022 and above (RC5 or greater
+    of the CPAN distribution).
+
 PPM PACKAGE
     A Win32 ppm package, suitable for use with ActivePerl
     compatible Perl packages, is available at

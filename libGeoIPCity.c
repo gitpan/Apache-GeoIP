@@ -157,7 +157,7 @@ GeoIPRecord * GeoIP_record_by_addr (GeoIP* gi, const char *addr) {
 
 GeoIPRecord * GeoIP_record_by_name (GeoIP* gi, const char *name) {
 	unsigned long ipnum;
-        /* struct hostent * host;   */
+	/* struct hostent * host; */
 	if (name == NULL) {
 		return 0;
 	}

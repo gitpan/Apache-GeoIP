@@ -1,28 +1,29 @@
-package Apache::Geo::Mirror;
+package Apache2::Geo::Mirror;
 
 use strict;
 use warnings;
 use vars qw($VERSION $GIP %lat %lon $MIRROR $NEARBY_CACHE $DEFAULT $cfg);
 
-$VERSION = '1.52';
+$VERSION = '1.62';
 
-use Apache::RequestRec ();
-use Apache::Const -compile => qw(REMOTE_HOST REDIRECT);
-use Apache::RequestUtil ();
+use Apache2::RequestRec ();
+use Apache2::Const -compile => qw(REMOTE_HOST REDIRECT);
+use Apache2::RequestUtil ();
 use APR::Table ();
-use Apache::Log ();
-use Apache::Connection ();
-use Apache::URI ();
+use Apache2::Log ();
+use Apache2::Connection ();
+use Apache2::URI ();
 use APR::URI ();
-use Apache::GeoIP;
+use Apache2::GeoIP;
 my $GEOIP_DBFILE;
 
-@Apache::Geo::Mirror::ISA = qw(Apache::RequestRec);
+@Apache2::Geo::Mirror::ISA = qw(Apache2::RequestRec);
 
 use constant PI => 3.14159265358979323846;
 use constant GEOIP_STANDARD => 0;
 use constant GEOIP_MEMORY_CACHE => 1;
 use constant GEOIP_CHECK_CACHE => 2;
+use constant GEOIP_INDEX_CACHE => 4;
 
 unless (%lat and %lon) {
   while (<DATA>) {
@@ -63,7 +64,7 @@ sub init {
   
   my $flag = $r->dir_config->get('GeoIPFlag') || '';
   if ($flag) {
-    unless ($flag =~ /^(STANDARD|MEMORY_CACHE|CHECK_CACHE)$/i) {
+    unless ($flag =~ /^(STANDARD|MEMORY_CACHE|CHECK_CACHE|INDEX_CACHE)$/i) {
       $r->log->error("GeoIP flag '$flag' not understood");
       die;
     }
@@ -77,10 +78,14 @@ sub init {
       $flag = GEOIP_CHECK_CACHE;
       last FLAG;
     };
+    ($flag && $flag eq 'INDEX_CACHE') && do {
+      $flag = GEOIP_INDEX_CACHE;
+      last FLAG;
+    };
     $flag = GEOIP_STANDARD;
   }
   
-  unless ($GIP->{$loc} = Apache::GeoIP->open($file, $flag)) {
+  unless ($GIP->{$loc} = Apache2::GeoIP->open($file, $flag)) {
     $r->log->error("Couldn't make GeoIP object");
     die;
   }
@@ -154,7 +159,7 @@ sub find_mirror_by_addr {
 
 sub find_mirror_by_name {
   my $self = shift;
-  my $name = shift || $self->get_remote_host(Apache::REMOTE_HOST);
+  my $name = shift || $self->get_remote_host(Apache2::Const::REMOTE_HOST);
   my $default = $self->{default};
   my $gip = $self->{gip};
   
@@ -212,7 +217,7 @@ sub auto_redirect : method {
   $where =~ s!:\d+!!;
   #  $r->log->warn("$where $host");
   $r->headers_out->set(Location => $where);
-  return Apache::REDIRECT;
+  return Apache2::Const::REDIRECT;
 }
   
 sub _calculate_distance {
@@ -478,35 +483,35 @@ __END__
 
 =head1 NAME
 
-Apache::Geo::Mirror - Find closest Mirror
+Apache2::Geo::Mirror - Find closest Mirror
 
 =head1 SYNOPSIS
 
  # in httpd.conf
- # PerlModule Apache::HelloMirror
+ # PerlModule Apache2::HelloMirror
  #<Location /mirror>
  #   SetHandler perl-script
- #   PerlResponseHandler Apache::HelloMirror
+ #   PerlResponseHandler Apache2::HelloMirror
  #   PerlSetVar GeoIPDBFile "/usr/local/share/GeoIP/GeoIP.dat"
  #   PerlSetVar GeoIPFlag Standard
  #   PerlSetVar GeoIPMirror "/usr/local/share/data/mirror.txt"
  #   PerlSetVar GeoIPDefault it
  #</Location>
  
- # file Apache::HelloMirror
+ # file Apache2::HelloMirror
  
- use Apache::Geo::Mirror;
+ use Apache2::Geo::Mirror;
  use strict;
  
- use Apache::Const -compile => 'OK';
+ use Apache2::Const -compile => 'OK';
  
  sub handler {
-   my $r = Apache::Geo::Mirror->new(shift);
+   my $r = Apache2::Geo::Mirror->new(shift);
    $r->content_type('text/plain');
    my $mirror = $r->find_mirror_by_addr();
    $r->print($mirror);
   
-   Apache::OK;
+   Apache2::Const::OK;
  }
  1;
  
@@ -522,16 +527,16 @@ closest country using a latitude/longitude table.
 
 =head1 CONFIGURATION
 
-This module subclasses I<Apache::RequestRec>, and can be used as follows
+This module subclasses I<Apache2::RequestRec>, and can be used as follows
 in an Apache module.
  
-  # file Apache::HelloMirror
+  # file Apache2::HelloMirror
   
-  use Apache::Geo::Mirror;
+  use Apache2::Geo::Mirror;
   use strict;
  
   sub handler {
-     my $r = Apache::Geo::Mirror->new(shift);
+     my $r = Apache2::Geo::Mirror->new(shift);
      # continue along
   }
  
@@ -561,7 +566,8 @@ This can be set to I<STANDARD>, or for faster performance
 but at a cost of using more memory, I<MEMORY_CACHE>.
 When using memory
 cache you can force a reload if the file is updated by 
-using I<CHECK_CACHE>.
+using I<CHECK_CACHE>. The I<INDEX_CACHE> flag caches
+the most frequently accessed portion of the database.
 If not specified, I<STANDARD> is used.
 
 =item PerlSetVar GeoIPMirror "/path/to/mirror.txt"
@@ -603,21 +609,21 @@ given, this defaults C<$r-E<gt>connection-E<gt>remote_ip>.
 =item $mirror = $r->find_mirror_by_name( [$ipname] );
 
 Finds the nearest mirror by country code. If I<$ipname> is not
-given, this defaults to C<$r-E<gt>get_remote_host(Apache::REMOTE_HOST)>.
+given, this defaults to C<$r-E<gt>get_remote_host(Apache2::Const::REMOTE_HOST)>.
 
 =back
 
 =head1 AUTOMATIC REDIRECTION
 
-If I<Apache::Geo::Mirror> is used as
+If I<Apache2::Geo::Mirror> is used as
 
-  PerlModule Apache::Geo::Mirror
+  PerlModule Apache2::Geo::Mirror
   <Location /CPAN>
     PerlSetVar GeoIPDBFile "/usr/local/share/geoip/GeoIP.dat"
     PerlSetVar GeoIPFlag Standard
     PerlSetVar GeoIPMirror "/usr/local/share/data/mirror.txt"
     PerlSetVar GeoIPDefault us
-    PerlResponseHandler Apache::Geo::Mirror->auto_redirect
+    PerlResponseHandler Apache2::Geo::Mirror->auto_redirect
   </Location>
 
 then an automatic redirection is made.
@@ -628,7 +634,7 @@ then an automatic redirection is made.
 
 =head1 SEE ALSO
 
-L<Geo::IP>, L<Geo::Mirror>, and L<Apache::RequestRec>.
+L<Geo::IP>, L<Geo::Mirror>, and L<Apache2::RequestRec>.
 
 =head1 AUTHOR
 

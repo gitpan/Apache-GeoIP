@@ -1,14 +1,14 @@
 package TestGeoIP::mirror;
-use Apache::Geo::Mirror;
+use Apache2::Geo::Mirror;
 use strict;
 use warnings FATAL => 'all';
 
-use Apache::Const -compile => 'OK';
-use Apache::RequestIO ();   # for $r->print
-use Apache::RequestRec ();  # for $r->content_type
+use Apache2::Const -compile => 'OK';
+use Apache2::RequestIO ();   # for $r->print
+use Apache2::RequestRec ();  # for $r->content_type
 
 sub handler {
-  my $r = Apache::Geo::Mirror->new(shift);
+  my $r = Apache2::Geo::Mirror->new(shift);
   $r->content_type('text/plain');
   my $ip = $r->args;
   my $mirror;
@@ -22,7 +22,7 @@ sub handler {
   
   $r->print($mirror);
   
-  Apache::OK;
+  Apache2::Const::OK;
 }
 1;
 
@@ -42,10 +42,10 @@ __DATA__
   PerlSetVar GeoIPDefault us
 </Location>
 
-PerlModule Apache::Geo::Mirror
+PerlModule Apache2::Geo::Mirror
 <Location /mirror>
   SetHandler modperl
-  PerlResponseHandler Apache::Geo::Mirror->auto_redirect
+  PerlResponseHandler Apache2::Geo::Mirror->auto_redirect
   PerlSetvar GeoIPMirror "@ServerRoot@/conf/auto_mirror.txt"
   PerlSetVar GeoIPDefault jp
 </Location>

@@ -6,7 +6,7 @@ use vars qw($VERSION $GIP %lat %lon $MIRROR $NEARBY_CACHE $DEFAULT);
 use Apache::GeoIP;
 use POSIX;
 
-$VERSION = '1.52';
+$VERSION = '1.62';
 
 my $GEOIP_DBFILE;
 
@@ -20,6 +20,7 @@ use constant PI => 3.14159265358979323846;
 use constant GEOIP_STANDARD => 0;
 use constant GEOIP_MEMORY_CACHE => 1;
 use constant GEOIP_CHECK_CACHE => 2;
+use constant GEOIP_INDEX_CACHE => 4;
 
 unless (%lat and %lon) {
   while (<DATA>) {
@@ -60,7 +61,7 @@ sub init {
   
   my $flag = $r->dir_config('GeoIPFlag') || '';
   if ($flag) {
-    unless ($flag =~ /^(STANDARD|MEMORY_CACHE|CHECK_CACHE)$/i) {
+    unless ($flag =~ /^(STANDARD|MEMORY_CACHE|CHECK_CACHE|INDEX_CACHE)$/i) {
       $r->warn("GeoIP flag '$flag' not understood");
       die;
     }
@@ -72,6 +73,10 @@ sub init {
     };
     ($flag && $flag eq 'CHECK_CACHE') && do {
       $flag = GEOIP_CHECK_CACHE;
+      last FLAG;
+    };
+    ($flag && $flag eq 'INDEX_CACHE') && do {
+      $flag = GEOIP_INDEX_CACHE;
       last FLAG;
     };
     $flag = GEOIP_STANDARD;
@@ -549,7 +554,8 @@ This can be set to I<STANDARD>, or for faster performance
 but at a cost of using more memory, I<MEMORY_CACHE>.
 When using memory
 cache you can force a reload if the file is updated by 
-using I<CHECK_CACHE>.
+using I<CHECK_CACHE>. The I<INDEX_CACHE> flag caches
+the most frequently accessed portion of the database.
 If not specified, I<STANDARD> is used.
 
 =item PerlSetVar GeoIPMirror "/path/to/mirror.txt"

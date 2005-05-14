@@ -1,21 +1,21 @@
 package TestGeoIP::name;
-use Apache::Geo::IP;
+use Apache2::Geo::IP;
 use strict;
 use warnings FATAL => 'all';
 
-use Apache::Const -compile => 'OK';
-use Apache::RequestIO ();   # for $r->print
-use Apache::RequestRec ();  # for $r->content_type
+use Apache2::Const -compile => 'OK';
+use Apache2::RequestIO ();   # for $r->print
+use Apache2::RequestRec ();  # for $r->content_type
 
 sub handler {
-  my $r = Apache::Geo::IP->new(shift);
+  my $r = Apache2::Geo::IP->new(shift);
   $r->content_type('text/plain');
   my $ip = $r->args;
   my $country = uc($r->country_code_by_name($ip));
   
   $r->print($country);
   
-  Apache::OK;
+  Apache2::Const::OK;
 }
 1;
 

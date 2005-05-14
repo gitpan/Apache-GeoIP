@@ -1,21 +1,21 @@
-package Apache::Geo::IP::Record;
+package Apache2::Geo::IP::Record;
 
-use Apache::GeoIP;
+use Apache2::GeoIP;
 use strict;
-use Apache::RequestRec ();
-use Apache::RequestUtil ();
+use Apache2::RequestRec ();
+use Apache2::RequestUtil ();
 use APR::Table ();
-use Apache::Log ();
-use Apache::Connection ();
-use Apache::Module ();
-use Apache::Const -compile => qw(REMOTE_HOST REDIRECT);
+use Apache2::Log ();
+use Apache2::Connection ();
+use Apache2::Module ();
+use Apache2::Const -compile => qw(REMOTE_HOST REDIRECT);
 use vars qw($VERSION $record $gir $cfg);
 
 my $GEOIP_DBCITYFILE;
 
-@Apache::Geo::IP::Record::ISA = qw(Apache::RequestRec);
+@Apache2::Geo::IP::Record::ISA = qw(Apache2::RequestRec);
 
-$VERSION = '1.21';
+$VERSION = '1.62';
 
 use constant GEOIP_STANDARD => 0;
 use constant GEOIP_MEMORY_CACHE => 1;
@@ -62,7 +62,7 @@ sub init {
       $flag = GEOIP_STANDARD;
   }
 
-  unless ($gir = Apache::GeoIP->open($file, $flag)) {
+  unless ($gir = Apache2::GeoIP->open($file, $flag)) {
     $r->log->error("Couldn't make GeoIP record object");
     die;
   }
@@ -149,34 +149,34 @@ __END__
 
 =head1 NAME
 
-Apache::Geo::IP::Record - Contains city information for GeoIP City Edition
+Apache2::Geo::IP::Record - Contains city information for GeoIP City Edition
 
 =head1 SYNOPSIS
 
  # in httpd.conf
- # PerlModule Apache::HelloIP
+ # PerlModule Apache2::HelloIP
  #<Location /ip>
  #   SetHandler perl-script
- #   PerlResponseHandler Apache::HelloIP
+ #   PerlResponseHandler Apache2::HelloIP
  #   PerlSetVar GeoIPDBCityFile "/usr/local/share/GeoIP/GeoIPCity.dat"
  #   PerlSetVar GeoIPFlag Standard
  #</Location>
  
- # file Apache::HelloIP
+ # file Apache2::HelloIP
   
- use Apache::Geo::IP::Record;
+ use Apache2::Geo::IP::Record;
  use strict;
 
- use Apache::Const -compile => 'OK';
+ use Apache2::Const -compile => 'OK';
  
  sub handler {
-   my $r = Apache::Geo::IP::Record->new(shift);
+   my $r = Apache2::Geo::IP::Record->new(shift);
    $r->content_type('text/plain');
    my $city = $r->city;
  
    $r->print($city);
   
-   return Apache::OK;
+   return Apache2::Const::OK;
  }
  1;
 
@@ -188,22 +188,22 @@ returned by the GeoIP City database.
 
 =head1 CONFIGURATION
 
-This module subclasses I<Apache::RequestReq>, and can be used as follows
+This module subclasses I<Apache2::RequestReq>, and can be used as follows
 in an Apache module.
  
-  # file Apache::HelloIP
+  # file Apache2::HelloIP
   
-  use Apache::Geo::IP::Record;
+  use Apache2::Geo::IP::Record;
   use strict;
   
   sub handler {
-     my $r = Apache::Geo::IP::Record->new(shift);
+     my $r = Apache2::Geo::IP::Record->new(shift);
      # continue along
   }
  
 The directives in F<httpd.conf> are as follows:
  
-  PerlModule Apache::HelloIP
+  PerlModule Apache2::HelloIP
   <Location /ip>
     PerlSetVar GeoIPDBCityFile "/usr/local/share/GeoIP/GeoIPCity.dat"
     PerlSetVar GeoIPFlag Standard
@@ -293,7 +293,7 @@ C<$r-E<gt>connection-E<gt>remote_ip> is used.
 
 =head1 SEE ALSO
 
-L<Geo::IP> and L<Apache>.
+L<Geo::IP>.
 
 =head1 AUTHOR
 

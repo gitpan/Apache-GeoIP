@@ -1,13 +1,13 @@
-package Apache::GeoIP;
+package Apache2::GeoIP;
 
 use strict;
 use warnings;
 use vars qw($VERSION);
 require DynaLoader;
 
-@Apache::GeoIP::ISA = qw(DynaLoader);
+@Apache2::GeoIP::ISA = qw(DynaLoader);
 
-$VERSION = '1.52';
+$VERSION = '1.62';
 
 __PACKAGE__->bootstrap($VERSION);
 
@@ -17,7 +17,7 @@ __END__
 
 =head1 NAME
 
-Apache::GeoIP - Look up country by IP Address
+Apache2::GeoIP - Look up country by IP Address
 
 =head1 IP ADDRESS TO COUNTRY DATABASES
 
@@ -42,7 +42,7 @@ from SourceForge; see http://sourceforge.net/projects/geoip/.
 
 =head1 SEE ALSO
 
-L<Apache::Geo::IP> and L<Apache::Geo::Mirror>.
+L<Apache2::Geo::IP> and L<Apache2::Geo::Mirror>.
 
 =head1 AUTHOR
 

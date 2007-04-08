@@ -260,7 +260,7 @@ sub mp_copy {
 
 sub wanted {
   my $name = $File::Find::name;
-  not (-d $_ or $name =~ m!CVS!) and push @src_files, $name; 
+  not (-d $_ or $name =~ m!CVS|svn!i) and push @src_files, $name; 
 }
 
 sub which_modperl {

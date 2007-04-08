@@ -7,7 +7,7 @@ require DynaLoader;
 
 @Apache2::GeoIP::ISA = qw(DynaLoader);
 
-$VERSION = '1.62';
+$VERSION = '1.63';
 
 __PACKAGE__->bootstrap($VERSION);
 

@@ -11,6 +11,7 @@ libGeoIP.c
 libGeoIP.h
 libGeoIPCity.c
 libGeoIPCity.h
+libGeoIP_internal.h
 typemap
 Apache/t/response/TestGeoIP/ip.pm
 Apache/t/response/TestGeoIP/mirror.pm

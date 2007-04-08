@@ -7,6 +7,7 @@ extern "C" {
 #include "XSUB.h"
 
 #include "libGeoIP.h"
+#include "libGeoIP_internal.h"
 #include "libGeoIPCity.h"
 
 #ifdef __cplusplus

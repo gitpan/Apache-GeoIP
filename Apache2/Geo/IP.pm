@@ -14,7 +14,7 @@ use Apache2::GeoIP;
 
 @Apache2::Geo::IP::ISA = qw(Apache2::RequestRec);
 
-$VERSION = '1.62';
+$VERSION = '1.63';
 
 my $GEOIP_DBFILE;
 

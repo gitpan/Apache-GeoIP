@@ -4,7 +4,7 @@ use strict;
 use warnings;
 use vars qw($VERSION $GIP %lat %lon $MIRROR $NEARBY_CACHE $DEFAULT $cfg);
 
-$VERSION = '1.62';
+$VERSION = '1.63';
 
 use Apache2::RequestRec ();
 use Apache2::Const -compile => qw(REMOTE_HOST REDIRECT);

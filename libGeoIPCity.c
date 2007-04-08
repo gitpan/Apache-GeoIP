@@ -1,24 +1,25 @@
 /* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 2; tab-width: 2 -*- */
 /* GeoIPCity.c
  *
- * Copyright (C) 2003 MaxMind LLC
+ * Copyright (C) 2006 MaxMind LLC
  *
  * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public
+ * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * General Public License for more details.
+ * Lesser General Public License for more details.
  *
- * You should have received a copy of the GNU General Public
+ * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
 #include "libGeoIP.h"
+#include "libGeoIP_internal.h"
 #include "libGeoIPCity.h"
 #ifndef WIN32
 #include <netdb.h>
@@ -30,12 +31,12 @@
 #include <sys/types.h> /* For uint32_t */
 #ifdef HAVE_STDINT_H
 #include <stdint.h>     /* For uint32_t */
-#else
-typedef unsigned int uint32_t;
 #endif
 
+static
 const int FULL_RECORD_LENGTH = 50;
 
+static
 GeoIPRecord * _extract_record(GeoIP* gi, unsigned int seek_record, int *next_record_ptr) {
 	int record_pointer;
 	unsigned char *record_buf = NULL;
@@ -60,6 +61,8 @@ GeoIPRecord * _extract_record(GeoIP* gi, unsigned int seek_record, int *next_rec
 		bytes_read = fread(record_buf, sizeof(char), FULL_RECORD_LENGTH, gi->GeoIPDatabase);
 		if (bytes_read == 0) {
 			/* eof or other error */
+			free(begin_record_buf);
+			free(record);
 			return NULL;
 		}
 	} else {
@@ -133,6 +136,7 @@ GeoIPRecord * _extract_record(GeoIP* gi, unsigned int seek_record, int *next_rec
 	return record;
 }
 
+static
 GeoIPRecord * _get_record(GeoIP* gi, unsigned long ipnum) {
 	unsigned int seek_record;
 
@@ -142,8 +146,12 @@ GeoIPRecord * _get_record(GeoIP* gi, unsigned long ipnum) {
 		return 0;
 	}
 
-	seek_record = _seek_record(gi, ipnum);
+	seek_record = _GeoIP_seek_record(gi, ipnum);
 	return _extract_record(gi, seek_record, NULL);
+}
+
+GeoIPRecord * GeoIP_record_by_ipnum (GeoIP* gi, unsigned long ipnum) {
+	return _get_record(gi, ipnum);
 }
 
 GeoIPRecord * GeoIP_record_by_addr (GeoIP* gi, const char *addr) {
@@ -151,17 +159,16 @@ GeoIPRecord * GeoIP_record_by_addr (GeoIP* gi, const char *addr) {
 	if (addr == NULL) {
 		return 0;
 	}
-	ipnum = _addr_to_num(addr);
+	ipnum = _GeoIP_addr_to_num(addr);
 	return _get_record(gi, ipnum);
 }
 
 GeoIPRecord * GeoIP_record_by_name (GeoIP* gi, const char *name) {
 	unsigned long ipnum;
-	/* struct hostent * host; */
 	if (name == NULL) {
 		return 0;
 	}
-	ipnum = lookupaddress(name);
+	ipnum = _GeoIP_lookupaddress(name);
 	return _get_record(gi, ipnum);
 }
 
@@ -175,8 +182,8 @@ int GeoIP_record_id_by_addr (GeoIP* gi, const char *addr) {
 	if (addr == NULL) {
 		return 0;
 	}
-	ipnum = _addr_to_num(addr);
-	return _seek_record(gi, ipnum);
+	ipnum = _GeoIP_addr_to_num(addr);
+	return _GeoIP_seek_record(gi, ipnum);
 }
 
 int GeoIP_init_record_iter (GeoIP* gi) {

@@ -15,7 +15,7 @@ my $GEOIP_DBCITYFILE;
 
 @Apache2::Geo::IP::Record::ISA = qw(Apache2::RequestRec);
 
-$VERSION = '1.62';
+$VERSION = '1.63';
 
 use constant GEOIP_STANDARD => 0;
 use constant GEOIP_MEMORY_CACHE => 1;

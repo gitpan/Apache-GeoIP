@@ -6,7 +6,7 @@ use vars qw($VERSION $GIP %lat %lon $MIRROR $NEARBY_CACHE $DEFAULT);
 use Apache::GeoIP;
 use POSIX;
 
-$VERSION = '1.62';
+$VERSION = '1.63';
 
 my $GEOIP_DBFILE;
 

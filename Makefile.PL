@@ -18,25 +18,27 @@ push @$files_to_clean, 't/TEST';
 
 my $name = ($libdir eq 'Apache') ? 'Apache::GeoIP' : 'Apache2::GeoIP';
 
-my $eu_version = $ExtUtils::MakeMaker::VERSION;
 my %opts = (
-              NAME           => $name,
-              DISTNAME       => 'Apache-GeoIP',
-	      VERSION_FROM   => "$libdir/GeoIP.pm",
-              PREREQ_PM      => $prereq,
-	      ($] >= 5.005 ?    
-               (ABSTRACT   => 'Look up country by IP address',
-                AUTHOR     => 'Randy Kobes <r.kobes@uwinnipeg.ca>') 
-	       : ()),
-	      clean          => { FILES => "@$files_to_clean"},
-              ($eu_version >= 6.11 ?
-                (NO_META     => 1,)
-                : ()),
-	      dist           => {
-				 SUFFIX   => 'gz',
-				 COMPRESS => 'gzip -9f',
+	NAME           => $name,
+	DISTNAME       => 'Apache-GeoIP',
+	VERSION_FROM   => "$libdir/GeoIP.pm",
+	PREREQ_PM      => $prereq,
+	ABSTRACT       => 'Look up country by IP address',
+	AUTHOR         => 'Randy Kobes <r.kobes@uwinnipeg.ca>',
+	clean          => { FILES => "@$files_to_clean"},
+
+	'META_MERGE' => {
+		'meta-spec' => { version => 2 },
+		resources => {
+			repository => {
+				type => 'git',
+				url  => 'git@github.com:briandfoy/Apache-GeoIP.git',
+				web  => 'https://github.com/briandfoy/Apache-GeoIP',
 				},
-           );
+			},
+		},
+
+	);
 
 require Apache::TestMM;
 import Apache::TestMM qw(test clean);

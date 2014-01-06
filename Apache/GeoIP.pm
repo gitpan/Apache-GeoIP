@@ -5,7 +5,7 @@ use warnings;
 use base qw(Exporter);
 use vars qw($VERSION @EXPORT_OK);
 
-$VERSION = '1.99';
+$VERSION = '1.99_01';
 @EXPORT_OK = qw(find_addr);
 
 sub find_addr {

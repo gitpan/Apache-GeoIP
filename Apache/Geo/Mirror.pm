@@ -6,7 +6,7 @@ use vars qw($VERSION $GM $ROBOTS_TXT $DEFAULT $FRESH $XFORWARDEDFOR);
 use Apache::GeoIP;
 use POSIX;
 
-$VERSION = '1.99';
+$VERSION = '1.99_01';
 
 my $GEOIP_DBFILE;
 my $robots_txt = '';

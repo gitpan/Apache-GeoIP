@@ -5,8 +5,17 @@ use warnings;
 use base qw(Exporter);
 use vars qw($VERSION @EXPORT_OK);
 
-$VERSION = '1.99';
+$VERSION = '1.99_01';
 @EXPORT_OK = qw(find_addr);
+
+sub get_remote_ip {
+  my ($r) = @_;
+  if ($r->can('useragent_ip')) {
+    return $r->useragent_ip;
+  } else {
+    return $r->connection->remote_ip;
+  }
+}
 
 sub find_addr {
   my ($r, $xforwardedfor) = @_;
@@ -14,8 +23,7 @@ sub find_addr {
   if (defined $xforwardedfor) {
     my $ReIpNum = qr{([01]?\d\d?|2[0-4]\d|25[0-5])};
     my $ReIpAddr = qr{^$ReIpNum\.$ReIpNum\.$ReIpNum\.$ReIpNum$};
-    $host =  $r->headers_in->get('X-Forwarded-For') || 
-      $r->connection->remote_ip;
+    $host =  $r->headers_in->get('X-Forwarded-For') || get_remote_ip($r);
     if ($host =~ /,/) {
       my @a = split /\s*,\s*/, $host;
       for my $i (0 .. $#a) {
@@ -28,7 +36,7 @@ sub find_addr {
     }
   }
   else {
-    $host = $r->connection->remote_ip;
+    $host = get_remote_ip($r);
   }
   return $host;
 }

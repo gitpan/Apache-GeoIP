@@ -12,7 +12,7 @@ use vars qw($VERSION $gi $xforwardedfor);
 use Geo::IP;
 use Apache::GeoIP qw(find_addr);
 
-$VERSION = '1.99';
+$VERSION = '1.99_01';
 
 my @flags = qw(STANDARD MEMORY_CACHE CHECK_CACHE 
                INDEX_CACHE MMAP_CACHE

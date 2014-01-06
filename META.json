@@ -1,0 +1,30 @@
+{
+   "abstract" : "Look up country by IP address",
+   "author" : [
+      "Randy Kobes <r.kobes@uwinnipeg.ca>"
+   ],
+   "dynamic_config" : 1,
+   "generated_by" : "ExtUtils::MakeMaker version 6.66, CPAN::Meta::Converter version 2.120921",
+   "license" : [
+      "unknown"
+   ],
+   "meta-spec" : {
+      "url" : "http://search.cpan.org/perldoc?CPAN::Meta::Spec",
+      "version" : "2"
+   },
+   "name" : "Apache-GeoIP",
+   "no_index" : {
+      "directory" : [
+         "t",
+         "inc"
+      ]
+   },
+   "release_status" : "testing",
+   "resources" : {
+      "repository" : {
+         "type" : "git",
+         "web" : "https://github.com/briandfoy/Apache-GeoIP"
+      }
+   },
+   "version" : "1.99_01"
+}

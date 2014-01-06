@@ -14,7 +14,7 @@ use Geo::IP;
 use Apache2::GeoIP qw(find_addr);
 @Apache2::Geo::IP::ISA = qw(Apache2::RequestRec);
 
-$VERSION = '1.99';
+$VERSION = '1.99_01';
 
 my @flags = qw(STANDARD MEMORY_CACHE CHECK_CACHE 
                INDEX_CACHE MMAP_CACHE
